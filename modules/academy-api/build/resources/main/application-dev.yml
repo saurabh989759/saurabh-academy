@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/academy_db_dev?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
+    username: root
+    password: rootpassword
+  
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+logging:
+  level:
+    com.academy: DEBUG
+    org.springframework.kafka: DEBUG
+

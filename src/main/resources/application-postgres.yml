@@ -1,0 +1,17 @@
+# Alternative PostgreSQL configuration
+# To use: java -jar app.jar --spring.profiles.active=postgres
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/academy_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  
+  flyway:
+    locations: classpath:db/migration
+

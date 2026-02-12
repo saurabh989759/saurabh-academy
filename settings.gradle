@@ -1,0 +1,14 @@
+rootProject.name = 'academy-backend'
+
+// Multi-module project structure
+include 'academy-common'
+include 'academy-api'
+include 'academy-service'
+include 'academy-kafka-producer'
+include 'academy-kafka-consumer'
+
+project(':academy-common').projectDir = file('modules/academy-common')
+project(':academy-api').projectDir = file('modules/academy-api')
+project(':academy-service').projectDir = file('modules/academy-service')
+project(':academy-kafka-producer').projectDir = file('modules/academy-kafka-producer')
+project(':academy-kafka-consumer').projectDir = file('modules/academy-kafka-consumer')

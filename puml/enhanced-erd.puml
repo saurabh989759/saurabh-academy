@@ -1,0 +1,248 @@
+@startuml Enhanced ERD - Academy Database Schema
+!theme plain
+skinparam linetype ortho
+skinparam roundcorner 20
+skinparam shadowing false
+
+' ============================================
+' CORE ENTITIES
+' ============================================
+
+entity "batch_type" as batch_type {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * **name** : VARCHAR(255) <<UNIQUE, NOT NULL>>
+    description : TEXT
+    --
+    ..
+    **Indexes:**
+    - PRIMARY KEY (id)
+    - UNIQUE INDEX (name)
+}
+
+entity "batches" as batches {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * **name** : VARCHAR(255) <<NOT NULL>>
+    * **start_month** : DATE
+    * **current_instructor** : VARCHAR(255)
+    * **batch_type_id** : BIGINT <<FK, NOT NULL>>
+    **version** : INT <<OPTIMISTIC_LOCK>>
+    --
+    ..
+    **Indexes:**
+    - PRIMARY KEY (id)
+    - FOREIGN KEY (batch_type_id) → batch_type(id)
+    - INDEX (batch_type_id)
+    - INDEX (start_month)
+}
+
+entity "classes" as classes {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * **name** : VARCHAR(255) <<NOT NULL>>
+    * **date** : DATE <<NOT NULL>>
+    * **time** : TIME <<NOT NULL>>
+    * **instructor** : VARCHAR(255) <<NOT NULL>>
+    --
+    ..
+    **Indexes:**
+    - PRIMARY KEY (id)
+    - INDEX (date)
+}
+
+entity "batches_classes" as batches_classes {
+    * **batch_id** : BIGINT <<PK, FK>>
+    * **class_id** : BIGINT <<PK, FK>>
+    --
+    ..
+    **Indexes:**
+    - PRIMARY KEY (batch_id, class_id)
+    - FOREIGN KEY (batch_id) → batches(id) ON DELETE CASCADE
+    - FOREIGN KEY (class_id) → classes(id) ON DELETE CASCADE
+}
+
+entity "students" as students {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * **name** : VARCHAR(255) <<NOT NULL>>
+    * **email** : VARCHAR(255) <<UNIQUE, NOT NULL>>
+    graduation_year : INT
+    university_name : VARCHAR(255)
+    phone_number : VARCHAR(50)
+    batch_id : BIGINT <<FK, NULLABLE>>
+    buddy_id : BIGINT <<FK, NULLABLE, SELF_REF>>
+    **version** : INT <<OPTIMISTIC_LOCK>>
+    --
+    ..
+    **Indexes:**
+    - PRIMARY KEY (id)
+    - UNIQUE INDEX (email)
+    - FOREIGN KEY (batch_id) → batches(id)
+    - FOREIGN KEY (buddy_id) → students(id)
+    - INDEX (batch_id)
+    - INDEX (email)
+}
+
+entity "mentors" as mentors {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * **name** : VARCHAR(255) <<NOT NULL>>
+    current_company : VARCHAR(255)
+    --
+    ..
+    **Indexes:**
+    - PRIMARY KEY (id)
+}
+
+entity "mentor_sessions" as mentor_sessions {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * **time** : DATETIME <<NOT NULL>>
+    * **duration_minutes** : INT <<NOT NULL>>
+    * **student_id** : BIGINT <<FK, NOT NULL>>
+    * **mentor_id** : BIGINT <<FK, NOT NULL>>
+    student_rating : INT <<1-5, NULLABLE>>
+    mentor_rating : INT <<1-5, NULLABLE>>
+    **version** : INT <<OPTIMISTIC_LOCK>>
+    --
+    ..
+    **Indexes:**
+    - PRIMARY KEY (id)
+    - FOREIGN KEY (student_id) → students(id)
+    - FOREIGN KEY (mentor_id) → mentors(id)
+    - INDEX (student_id)
+    - INDEX (mentor_id)
+    - INDEX (time)
+}
+
+' ============================================
+' AUDIT & HISTORY ENTITIES
+' ============================================
+
+entity "student_batch_history" as student_batch_history {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * **student_id** : BIGINT <<FK, NOT NULL>>
+    * **batch_id** : BIGINT <<FK, NOT NULL>>
+    * **shift_date** : DATE <<NOT NULL>>
+    --
+    ..
+    **Indexes:**
+    - PRIMARY KEY (id)
+    - FOREIGN KEY (student_id) → students(id)
+    - FOREIGN KEY (batch_id) → batches(id)
+    - INDEX (student_id)
+    - INDEX (batch_id)
+    - INDEX (shift_date)
+}
+
+entity "audit_events" as audit_events {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * **event_type** : VARCHAR(255) <<NOT NULL>>
+    * **payload** : TEXT <<JSON>>
+    * **created_at** : TIMESTAMP <<NOT NULL, DEFAULT NOW()>>
+    --
+    ..
+    **Indexes:**
+    - PRIMARY KEY (id)
+    - INDEX (event_type)
+    - INDEX (created_at)
+}
+
+' ============================================
+' RELATIONSHIPS
+' ============================================
+
+batch_type ||--o{ batches : "has (1:N)"
+batches ||--o{ students : "contains (1:N)"
+batches }o--o{ classes : "has (M:N via batches_classes)"
+batches_classes }o--|| batches : "belongs to"
+batches_classes }o--|| classes : "belongs to"
+students ||--o{ mentor_sessions : "books (1:N)"
+mentors ||--o{ mentor_sessions : "conducts (1:N)"
+students ||--o{ student_batch_history : "has history (1:N)"
+student_batch_history }o--|| batches : "references"
+students }o--|| students : "buddy (self-ref)"
+
+' ============================================
+' NOTES & CONSTRAINTS
+' ============================================
+
+note right of batch_type
+  **Batch Type Examples:**
+  - Full Stack Development
+  - Data Science
+  - DevOps
+end note
+
+note right of batches
+  **Batch Management:**
+  - Tracks start dates
+  - Current instructor
+  - Optimistic locking for concurrency
+end note
+
+note right of students
+  **Student Features:**
+  - Unique email constraint
+  - Buddy system (self-reference)
+  - Batch assignment
+  - Optimistic locking
+end note
+
+note right of mentor_sessions
+  **Mentor Session Features:**
+  - Core booking entity
+  - Bidirectional ratings
+  - Time and duration tracking
+  - Optimistic locking
+end note
+
+note right of audit_events
+  **Kafka Integration:**
+  - Stores consumed events
+  - Event types:
+    * student.registered
+    * mentor.session.created
+    * batch.created
+  - JSON payload format
+end note
+
+note right of student_batch_history
+  **Historical Tracking:**
+  - Tracks batch changes
+  - Records shift dates
+  - Audit trail for students
+end note
+
+note bottom of batches_classes
+  **Many-to-Many Relationship:**
+  - Join table for batches and classes
+  - Cascade delete enabled
+  - Composite primary key
+end note
+
+' ============================================
+' SUMMARY
+' ============================================
+
+note top
+  **Database Schema Summary:**
+  
+  **Total Tables:** 9
+  **Core Tables:** 6 (batch_type, batches, classes, students, mentors, mentor_sessions)
+  **Join Tables:** 1 (batches_classes)
+  **Audit/History:** 2 (audit_events, student_batch_history)
+  
+  **Key Features:**
+  - Optimistic locking (version columns)
+  - Foreign key constraints
+  - Unique constraints (email, batch_type name)
+  - Indexes on foreign keys and frequently queried columns
+  - Cascade delete for join tables
+end note
+
+@enduml
+

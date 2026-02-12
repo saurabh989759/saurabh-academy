@@ -1,0 +1,32 @@
+dependencies {
+    implementation project(':academy-common')
+    implementation project(':academy-kafka-producer')
+    
+    // Spring Boot Starters
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'org.springframework.boot:spring-boot-starter-aop' // For AOP aspects
+    
+    // Spring Integration - Native Spring distributed locking support
+    implementation 'org.springframework.integration:spring-integration-redis'
+    
+    // Jackson for JSON
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    
+    // MapStruct (for entity-DTO mappers only, not API models)
+    implementation "org.mapstruct:mapstruct:${mapstructVersion}"
+    annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
+    annotationProcessor "org.projectlombok:lombok-mapstruct-binding:0.2.0"
+    
+    // Test dependencies
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:mysql'
+    testImplementation 'org.testcontainers:kafka'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation project(':academy-common')
+}
+

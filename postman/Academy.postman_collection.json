@@ -1,0 +1,882 @@
+{
+  "info": {
+    "name": "Academy Backend API",
+    "description": "Complete Postman collection for Academy Backend APIs with JWT authentication.\n\n📋 STEP-BY-STEP INSTRUCTIONS:\n\nSTEP 1️⃣: Run 'Login' Request First\n   • Go to 'Authentication' folder\n   • Click on 'Login' request\n   • Click 'Send'\n   • ✅ Token will be automatically saved\n   • Check console: Should see '✅ JWT Token saved successfully!'\n\nSTEP 2️⃣: Use Any Other API Request\n   • Go to any folder (Students, Batches, Classes, etc.)\n   • Click on any request (e.g., 'Get All Students')\n   • Click 'Send'\n   • ✅ Token is automatically added to Authorization header\n   • Check console: Should see '✅ JWT token added to Authorization header'\n\nSTEP 3️⃣: Verify Token is Working\n   • If you get 401/403 error:\n     → Run 'Login' again to get fresh token\n     → Check console for error messages\n\n💡 TIP: Open Postman Console (View → Show Postman Console) to see all messages\n\nAll endpoints (except /api/auth/** and /actuator/**) require JWT token in Authorization header.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "academy-backend"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// ========================================",
+          "// STEP 2: Pre-Request - Add JWT Token to Header",
+          "// ========================================",
+          "var requestUrl = pm.request.url.toString();",
+          "var isAuthEndpoint = requestUrl.includes('/api/auth/');",
+          "var isActuatorEndpoint = requestUrl.includes('/actuator/');",
+          "var isPublicEndpoint = isAuthEndpoint || isActuatorEndpoint;",
+          "",
+          "console.log('🌐 Request URL:', requestUrl);",
+          "console.log('🔒 Is public endpoint:', isPublicEndpoint);",
+          "",
+          "if (!isPublicEndpoint) {",
+          "    // Get token from collection variable",
+          "    var token = pm.collectionVariables.get('jwt_token');",
+          "    ",
+          "    if (!token || token === '' || token === null || token === undefined) {",
+          "        console.error('❌ ERROR: No JWT token found in collection variable!');",
+          "        console.error('📋 STEP 1 REQUIRED: Please run the \"Login\" request first!');",
+          "        console.error('📍 Location: Authentication → Login');",
+          "        console.error('⚠️  This request will likely fail with 401/403 Unauthorized.');",
+          "        ",
+          "        // Try to get from environment variable as fallback",
+          "        var envToken = pm.environment.get('jwt_token');",
+          "        if (envToken) {",
+          "            console.log('💡 Found token in environment variable, using it...');",
+          "            token = envToken;",
+          "            pm.collectionVariables.set('jwt_token', token);",
+          "        }",
+          "    }",
+          "    ",
+          "    if (token && token !== '' && token !== null && token !== undefined) {",
+          "        // Remove any existing Authorization header",
+          "        pm.request.headers.remove('Authorization');",
+          "        ",
+          "        // Add Authorization header with Bearer token",
+          "        var authHeader = 'Bearer ' + token;",
+          "        pm.request.headers.add({",
+          "            key: 'Authorization',",
+          "            value: authHeader",
+          "        });",
+          "        ",
+          "        console.log('✅ STEP 2 COMPLETE: JWT token added to Authorization header');",
+          "        console.log('📝 Header: Authorization: Bearer ' + token.substring(0, 30) + '...');",
+          "        console.log('🔑 Token length:', token.length, 'characters');",
+          "        ",
+          "        // Verify header was added",
+          "        var addedHeader = pm.request.headers.get('Authorization');",
+          "        if (addedHeader) {",
+          "            console.log('✅ Verification: Authorization header is set');",
+          "        } else {",
+          "            console.error('❌ Verification failed: Authorization header not found!');",
+          "        }",
+          "    } else {",
+          "        console.error('❌ Cannot proceed: No valid token available');",
+          "    }",
+          "} else {",
+          "    console.log('ℹ️  Public endpoint - No authentication required');",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "// ========================================",
+          "// STEP 3: Test - Verify Response",
+          "// ========================================",
+          "",
+          "// Check for authentication errors",
+          "if (pm.response.code === 401 || pm.response.code === 403) {",
+          "    var errorType = pm.response.code === 401 ? 'Unauthorized' : 'Forbidden';",
+          "    console.error('❌ ERROR: ' + pm.response.code + ' ' + errorType);",
+          "    console.error('📋 DIAGNOSIS:');",
+          "    ",
+          "    // Check if Authorization header was sent",
+          "    var authHeader = pm.request.headers.get('Authorization');",
+          "    if (!authHeader) {",
+          "        console.error('   ❌ Authorization header is MISSING!');",
+          "        console.error('   📋 SOLUTION: Run \"Login\" request first (Authentication → Login)');",
+          "    } else {",
+          "        console.log('   ✅ Authorization header was sent:', authHeader.substring(0, 30) + '...');",
+          "        ",
+          "        // Check token format",
+          "        if (!authHeader.startsWith('Bearer ')) {",
+          "            console.error('   ❌ Authorization header format is wrong!');",
+          "            console.error('   📋 Expected: Bearer {token}');",
+          "            console.error('   📋 Found:', authHeader.substring(0, 20));",
+          "        } else {",
+          "            console.log('   ✅ Authorization header format is correct');",
+          "            ",
+          "            // Check if token might be expired",
+          "            var token = pm.collectionVariables.get('jwt_token');",
+          "            if (token) {",
+          "                console.log('   💡 Token exists in collection variable');",
+          "                console.log('   💡 TIP: Token might be expired. Run \"Login\" again to get fresh token');",
+          "            }",
+          "        }",
+          "    }",
+          "    ",
+          "    console.error('📋 STEP-BY-STEP FIX:');",
+          "    console.error('   1️⃣ Go to Authentication folder');",
+          "    console.error('   2️⃣ Run \"Login\" request');",
+          "    console.error('   3️⃣ Check console for \"✅ JWT Token saved successfully!\"');",
+          "    console.error('   4️⃣ Run this request again');",
+          "    ",
+          "    pm.test('❌ Request should be authorized', function () {",
+          "        pm.expect(pm.response.code).to.not.equal(401);",
+          "        pm.expect(pm.response.code).to.not.equal(403);",
+          "    });",
+          "} else if (pm.response.code >= 200 && pm.response.code < 300) {",
+          "    console.log('✅ SUCCESS: Request completed with status', pm.response.code);",
+          "    ",
+          "    // Verify Authorization header was sent",
+          "    var authHeader = pm.request.headers.get('Authorization');",
+          "    if (authHeader) {",
+          "        console.log('✅ Authorization header was sent successfully');",
+          "    }",
+          "}",
+          "",
+          "// Log response time",
+          "console.log('⏱️  Response time:', pm.response.responseTime, 'ms');"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// ========================================",
+                  "// STEP 1: Login - Extract and Save JWT Token",
+                  "// ========================================",
+                  "console.log('🔐 Processing login response...');",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    try {",
+                  "        var jsonData = pm.response.json();",
+                  "        console.log('📦 Response received:', JSON.stringify(jsonData, null, 2));",
+                  "        ",
+                  "        if (jsonData && jsonData.token) {",
+                  "            // Save token to collection variable",
+                  "            pm.collectionVariables.set('jwt_token', jsonData.token);",
+                  "            ",
+                  "            // Verify token was saved",
+                  "            var savedToken = pm.collectionVariables.get('jwt_token');",
+                  "            ",
+                  "            console.log('✅ STEP 1 COMPLETE: JWT Token saved successfully!');",
+                  "            console.log('📝 Token (first 30 chars):', jsonData.token.substring(0, 30) + '...');",
+                  "            console.log('💾 Token saved to variable: jwt_token');",
+                  "            console.log('✅ Token length:', jsonData.token.length, 'characters');",
+                  "            ",
+                  "            // Test assertion",
+                  "            pm.test('✅ Token saved to collection variable', function () {",
+                  "                pm.expect(savedToken).to.not.be.empty;",
+                  "                pm.expect(savedToken).to.equal(jsonData.token);",
+                  "            });",
+                  "            ",
+                  "            pm.test('✅ Token is valid JWT format', function () {",
+                  "                pm.expect(jsonData.token.split('.')).to.have.lengthOf(3);",
+                  "            });",
+                  "        } else {",
+                  "            console.error('❌ ERROR: No token found in response!');",
+                  "            console.error('Response structure:', JSON.stringify(jsonData, null, 2));",
+                  "            pm.test('❌ Response must contain token', function () {",
+                  "                pm.expect(jsonData.token).to.exist;",
+                  "            });",
+                  "        }",
+                  "    } catch (e) {",
+                  "        console.error('❌ ERROR: Failed to parse response:', e.message);",
+                  "        console.error('Response text:', pm.response.text());",
+                  "        pm.test('❌ Response must be valid JSON', function () {",
+                  "            pm.expect(e).to.be.null;",
+                  "        });",
+                  "    }",
+                  "} else {",
+                  "    console.error('❌ ERROR: Login failed with status code:', pm.response.code);",
+                  "    console.error('Response:', pm.response.text());",
+                  "    console.log('💡 TIP: Check username and password are correct');",
+                  "    console.log('💡 Default credentials: admin@academy.com / password123');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin@academy.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "🔐 STEP 1: Login to get JWT token\n\n📋 Instructions:\n1. Click 'Send' button\n2. Check Postman Console (View → Show Postman Console)\n3. Look for: '✅ STEP 1 COMPLETE: JWT Token saved successfully!'\n4. Token is automatically saved to collection variable 'jwt_token'\n5. Now you can use any other API request\n\n💡 Default Credentials:\n   • Username: admin@academy.com\n   • Password: password123\n\n✅ After successful login, proceed to STEP 2: Use any API request"
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Token",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{jwt_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/validate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "validate"]
+            },
+            "description": "Validate JWT token"
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints (no JWT required)"
+    },
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "Get All Students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/students?batchId=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "students"],
+              "query": [
+                {
+                  "key": "batchId",
+                  "value": "",
+                  "description": "Optional: Filter by batch ID",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get all students. Optional batchId query parameter to filter by batch. **Cached** (TTL: 30 minutes)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Students (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/students/paged?page=0&size=20&sort=name,asc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "students", "paged"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "Page number (0-indexed)"
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "description": "Page size"
+                },
+                {
+                  "key": "sort",
+                  "value": "name,asc",
+                  "description": "Sort criteria"
+                }
+              ]
+            },
+            "description": "Get paginated students"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Student by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/students/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "students", "1"]
+            },
+            "description": "Get student by ID. **Cached** (TTL: 30 minutes)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Akhilesh Gupta\",\n  \"email\": \"akhilesh@example.com\",\n  \"graduationYear\": 2024,\n  \"universityName\": \"State University\",\n  \"phoneNumber\": \"+1-555-123-4567\",\n  \"batchId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/students",
+              "host": ["{{base_url}}"],
+              "path": ["api", "students"]
+            },
+            "description": "Create a new student. Publishes 'student.registered' Kafka event. **Invalidates cache**"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Student",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Akhilesh Gupta Updated\",\n  \"email\": \"akhilesh@example.com\",\n  \"graduationYear\": 2024,\n  \"universityName\": \"Updated University\",\n  \"phoneNumber\": \"+1-555-123-4567\",\n  \"batchId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/students/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "students", "1"]
+            },
+            "description": "Update student. **Invalidates cache**"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Student",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/students/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "students", "1"]
+            },
+            "description": "Delete student. **Invalidates cache**"
+          },
+          "response": []
+        }
+      ],
+      "description": "Student management APIs"
+    },
+    {
+      "name": "Batches",
+      "item": [
+        {
+          "name": "Get All Batches (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/batches?page=0&size=20&sort=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "batches"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "Page number"
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "description": "Page size"
+                },
+                {
+                  "key": "sort",
+                  "value": "",
+                  "description": "Sort criteria",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get all batches with pagination. **Cached** (TTL: 30 minutes)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Batch by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/batches/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "batches", "1"]
+            },
+            "description": "Get batch by ID. **Cached** (TTL: 30 minutes)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"FSD-2024-03\",\n  \"startMonth\": \"2024-03-01\",\n  \"currentInstructor\": \"John Instructor\",\n  \"batchTypeId\": 1,\n  \"classIds\": [1, 2]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/batches",
+              "host": ["{{base_url}}"],
+              "path": ["api", "batches"]
+            },
+            "description": "Create a new batch. Publishes 'batch.created' Kafka event. **Invalidates cache**"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Batch",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"FSD-2024-03-Updated\",\n  \"startMonth\": \"2024-03-01\",\n  \"currentInstructor\": \"Jane Instructor\",\n  \"batchTypeId\": 1,\n  \"classIds\": [1, 2, 3]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/batches/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "batches", "1"]
+            },
+            "description": "Update batch. **Invalidates cache**"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Batch",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/batches/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "batches", "1"]
+            },
+            "description": "Delete batch. **Invalidates cache**"
+          },
+          "response": []
+        },
+        {
+          "name": "Assign Class to Batch",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/batches/1/classes/2",
+              "host": ["{{base_url}}"],
+              "path": ["api", "batches", "1", "classes", "2"]
+            },
+            "description": "Assign a class to a batch. **Invalidates cache**"
+          },
+          "response": []
+        }
+      ],
+      "description": "Batch management APIs"
+    },
+    {
+      "name": "Classes",
+      "item": [
+        {
+          "name": "Get All Classes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/classes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "classes"]
+            },
+            "description": "Get all classes. **Cached** (TTL: 30 minutes)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Class by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/classes/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "classes", "1"]
+            },
+            "description": "Get class by ID. **Cached** (TTL: 30 minutes)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Introduction to Java\",\n  \"date\": \"2024-03-15\",\n  \"time\": \"10:00:00\",\n  \"instructor\": \"Jane Smith\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/classes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "classes"]
+            },
+            "description": "Create a new class. **Invalidates cache**"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Class",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Advanced Java\",\n  \"date\": \"2024-03-20\",\n  \"time\": \"14:00:00\",\n  \"instructor\": \"John Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/classes/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "classes", "1"]
+            },
+            "description": "Update class. **Invalidates cache**"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Class",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/classes/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "classes", "1"]
+            },
+            "description": "Delete class. **Invalidates cache**"
+          },
+          "response": []
+        }
+      ],
+      "description": "Class management APIs"
+    },
+    {
+      "name": "Mentors",
+      "item": [
+        {
+          "name": "Get All Mentors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/mentors",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mentors"]
+            },
+            "description": "Get all mentors. **Cached** (TTL: 1 hour - stable reference data)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Mentor by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/mentors/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mentors", "1"]
+            },
+            "description": "Get mentor by ID. **Cached** (TTL: 1 hour)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Mentor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice Johnson\",\n  \"currentCompany\": \"Tech Corp\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mentors",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mentors"]
+            },
+            "description": "Create a new mentor. **Invalidates cache**"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Mentor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice Johnson Updated\",\n  \"currentCompany\": \"New Tech Corp\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mentors/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mentors", "1"]
+            },
+            "description": "Update mentor. **Invalidates cache**"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Mentor",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/mentors/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mentors", "1"]
+            },
+            "description": "Delete mentor. **Invalidates cache**"
+          },
+          "response": []
+        }
+      ],
+      "description": "Mentor management APIs"
+    },
+    {
+      "name": "Mentor Sessions",
+      "item": [
+        {
+          "name": "Get All Mentor Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/mentor-sessions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mentor-sessions"]
+            },
+            "description": "Get all mentor sessions. **Cached** (TTL: 10 minutes - frequently changing data)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Mentor Session by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/mentor-sessions/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mentor-sessions", "1"]
+            },
+            "description": "Get mentor session by ID. **Cached** (TTL: 10 minutes)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Mentor Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"time\": \"2024-03-20T15:00:00Z\",\n  \"durationMinutes\": 60,\n  \"studentId\": 1,\n  \"mentorId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mentor-sessions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mentor-sessions"]
+            },
+            "description": "Create a new mentor session. Publishes 'mentor.session.created' Kafka event. **Invalidates cache**"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Mentor Session",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"time\": \"2024-03-21T16:00:00Z\",\n  \"durationMinutes\": 90,\n  \"studentId\": 1,\n  \"mentorId\": 1,\n  \"studentRating\": 5,\n  \"mentorRating\": 4\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mentor-sessions/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mentor-sessions", "1"]
+            },
+            "description": "Update mentor session. **Invalidates cache**"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Mentor Session",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/mentor-sessions/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mentor-sessions", "1"]
+            },
+            "description": "Delete mentor session. **Invalidates cache**"
+          },
+          "response": []
+        }
+      ],
+      "description": "Mentor session management APIs"
+    },
+    {
+      "name": "Health & Monitoring",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/health",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Application health check (checks DB, Redis, Kafka)"
+          },
+          "response": []
+        },
+        {
+          "name": "Metrics",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "metrics"]
+            },
+            "description": "Application metrics"
+          },
+          "response": []
+        },
+        {
+          "name": "Prometheus",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/actuator/prometheus",
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "prometheus"]
+            },
+            "description": "Prometheus metrics endpoint"
+          },
+          "response": []
+        }
+      ],
+      "description": "Health and monitoring endpoints (no authentication required)"
+    }
+  ]
+}

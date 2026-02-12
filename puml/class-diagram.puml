@@ -1,0 +1,151 @@
+@startuml Class Diagram
+!theme plain
+skinparam classAttributeIconSize 0
+
+package "com.academy.entity" {
+    class BatchType {
+        -Long id
+        -String name
+    }
+    
+    class Batch {
+        -Long id
+        -String name
+        -LocalDate startMonth
+        -String currentInstructor
+        -BatchType batchType
+        -Set<ClassEntity> classes
+        -Set<Student> students
+    }
+    
+    class Student {
+        -Long id
+        -String name
+        -Integer graduationYear
+        -String universityName
+        -String email
+        -String phoneNumber
+        -Batch batch
+        -Long buddyId
+    }
+    
+    class ClassEntity {
+        -Long id
+        -String name
+        -LocalDate date
+        -LocalTime time
+        -String instructor
+        -Set<Batch> batches
+    }
+    
+    class Mentor {
+        -Long id
+        -String name
+        -String currentCompany
+    }
+    
+    class MentorSession {
+        -Long id
+        -Timestamp time
+        -Integer durationMinutes
+        -Student student
+        -Mentor mentor
+        -Integer studentRating
+        -Integer mentorRating
+    }
+    
+    class StudentBatchHistory {
+        -Long id
+        -Student student
+        -Batch batch
+        -LocalDate shiftDate
+    }
+    
+    class AuditEvent {
+        -Long id
+        -String eventType
+        -String payload
+        -Instant createdAt
+    }
+    
+    class User {
+        -Long id
+        -String username
+        -String password
+        -String role
+        -Boolean enabled
+    }
+}
+
+package "com.academy.security" {
+    class JwtService {
+        -String secret
+        -Long expiration
+        +generateToken(String username, String... roles) : String
+        +validateToken(String token) : Boolean
+        +extractUsername(String token) : String
+        +extractClaim(String token, Function) : T
+    }
+    
+    class JwtAuthenticationFilter {
+        -JwtService jwtService
+        -String authorizationHeader
+        -String bearerPrefix
+        +doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain) : void
+        -extractAuthorities(String token) : List<SimpleGrantedAuthority>
+    }
+    
+    class UserDetailsServiceImpl {
+        -UserRepository userRepository
+        +loadUserByUsername(String username) : UserDetails
+    }
+}
+
+package "com.academy.controller" {
+    class AuthController {
+        -JwtService jwtService
+        -AuthenticationManager authenticationManager
+        +login(LoginRequest) : ResponseEntity<AuthResponse>
+        +validateToken(ValidateTokenRequest) : ResponseEntity<ValidateTokenResponse>
+    }
+}
+
+package "com.academy.repository" {
+    class UserRepository {
+        +findByUsername(String username) : Optional<User>
+        +existsByUsername(String username) : Boolean
+    }
+}
+
+' Relationships
+BatchType ||--o{ Batch : "has"
+Batch }o--|| Student : "contains"
+Batch }o--o{ ClassEntity : "has"
+Student ||--o{ MentorSession : "books"
+Mentor ||--o{ MentorSession : "conducts"
+Student ||--o{ StudentBatchHistory : "has history"
+
+UserRepository }o--|| User : "manages"
+UserDetailsServiceImpl ..> UserRepository : "uses"
+JwtAuthenticationFilter ..> JwtService : "uses"
+AuthController ..> JwtService : "uses"
+AuthController ..> AuthenticationManager : "uses"
+UserDetailsServiceImpl ..> User : "loads"
+
+note right of MentorSession
+  Report: Feature Development Process
+  Core entity for "Book a Mentor Session"
+end note
+
+note right of User
+  Report: Authentication
+  Stores user credentials for JWT authentication
+end note
+
+note right of JwtService
+  Report: Security Implementation
+  Handles JWT token generation and validation
+end note
+
+@enduml
+

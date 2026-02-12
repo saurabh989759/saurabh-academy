@@ -1,0 +1,457 @@
+@startuml Complete Class Diagram - Academy Backend System
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' ============================================
+' ENTITY LAYER (Domain Models)
+' ============================================
+package "com.academy.entity" {
+    class BatchType {
+        -Long id
+        -String name
+        -String description
+        --
+        +getId() : Long
+        +getName() : String
+        +getDescription() : String
+    }
+    
+    class Batch {
+        -Long id
+        -String name
+        -LocalDate startMonth
+        -String currentInstructor
+        -Integer version
+        -BatchType batchType
+        -Set<ClassEntity> classes
+        -Set<Student> students
+        --
+        +getId() : Long
+        +getName() : String
+        +getStartMonth() : LocalDate
+        +getCurrentInstructor() : String
+        +getBatchType() : BatchType
+        +getClasses() : Set<ClassEntity>
+        +getStudents() : Set<Student>
+    }
+    
+    class Student {
+        -Long id
+        -String name
+        -String email
+        -Integer graduationYear
+        -String universityName
+        -String phoneNumber
+        -Integer version
+        -Batch batch
+        -Long buddyId
+        -Set<MentorSession> mentorSessions
+        --
+        +getId() : Long
+        +getName() : String
+        +getEmail() : String
+        +getGraduationYear() : Integer
+        +getBatch() : Batch
+        +getBuddyId() : Long
+    }
+    
+    class ClassEntity {
+        -Long id
+        -String name
+        -LocalDate date
+        -LocalTime time
+        -String instructor
+        -Set<Batch> batches
+        --
+        +getId() : Long
+        +getName() : String
+        +getDate() : LocalDate
+        +getTime() : LocalTime
+        +getInstructor() : String
+    }
+    
+    class Mentor {
+        -Long id
+        -String name
+        -String currentCompany
+        -Set<MentorSession> mentorSessions
+        --
+        +getId() : Long
+        +getName() : String
+        +getCurrentCompany() : String
+    }
+    
+    class MentorSession {
+        -Long id
+        -Timestamp time
+        -Integer durationMinutes
+        -Integer studentRating
+        -Integer mentorRating
+        -Integer version
+        -Student student
+        -Mentor mentor
+        --
+        +getId() : Long
+        +getTime() : Timestamp
+        +getDurationMinutes() : Integer
+        +getStudent() : Student
+        +getMentor() : Mentor
+    }
+    
+    class StudentBatchHistory {
+        -Long id
+        -LocalDate shiftDate
+        -Student student
+        -Batch batch
+        --
+        +getId() : Long
+        +getShiftDate() : LocalDate
+        +getStudent() : Student
+        +getBatch() : Batch
+    }
+    
+    class AuditEvent {
+        -Long id
+        -String eventType
+        -String payload
+        -Instant createdAt
+        --
+        +getId() : Long
+        +getEventType() : String
+        +getPayload() : String
+        +getCreatedAt() : Instant
+    }
+    
+    class User {
+        -Long id
+        -String username
+        -String password
+        -String email
+        --
+        +getId() : Long
+        +getUsername() : String
+        +getPassword() : String
+    }
+}
+
+' ============================================
+' REPOSITORY LAYER (Data Access)
+' ============================================
+package "com.academy.repository" {
+    interface StudentRepository {
+        +findById(Long) : Optional<Student>
+        +findByIdWithLock(Long) : Optional<Student>
+        +findByEmail(String) : Optional<Student>
+        +findByBatchId(Long) : List<Student>
+        +findAll() : List<Student>
+        +save(Student) : Student
+        +deleteById(Long) : void
+        +existsById(Long) : boolean
+    }
+    
+    interface BatchRepository {
+        +findById(Long) : Optional<Batch>
+        +findByIdWithLock(Long) : Optional<Batch>
+        +findAll() : List<Batch>
+        +save(Batch) : Batch
+        +deleteById(Long) : void
+        +existsById(Long) : boolean
+    }
+    
+    interface ClassRepository {
+        +findById(Long) : Optional<ClassEntity>
+        +findAll() : List<ClassEntity>
+        +save(ClassEntity) : ClassEntity
+        +deleteById(Long) : void
+        +existsById(Long) : boolean
+    }
+    
+    interface MentorRepository {
+        +findById(Long) : Optional<Mentor>
+        +findAll() : List<Mentor>
+        +save(Mentor) : Mentor
+        +deleteById(Long) : void
+    }
+    
+    interface MentorSessionRepository {
+        +findById(Long) : Optional<MentorSession>
+        +findByStudentId(Long) : List<MentorSession>
+        +save(MentorSession) : MentorSession
+        +deleteById(Long) : void
+        +deleteByStudentId(Long) : void
+    }
+    
+    interface BatchTypeRepository {
+        +findById(Long) : Optional<BatchType>
+        +findAll() : List<BatchType>
+    }
+    
+    interface AuditEventRepository {
+        +save(AuditEvent) : AuditEvent
+        +findAll() : List<AuditEvent>
+    }
+}
+
+' ============================================
+' SERVICE LAYER (Business Logic)
+' ============================================
+package "com.academy.service" {
+    class StudentService {
+        -StudentRepository studentRepository
+        -BatchRepository batchRepository
+        -MentorSessionRepository mentorSessionRepository
+        -StudentMapper studentMapper
+        -StudentEventProducer eventProducer
+        --
+        +getAllStudents(Long) : List<StudentDTO>
+        +getAllStudents(Pageable) : Page<StudentDTO>
+        +getStudentById(Long) : StudentDTO
+        +createStudent(StudentDTO) : StudentDTO
+        +updateStudent(Long, StudentDTO) : StudentDTO
+        +deleteStudent(Long) : void
+    }
+    
+    class BatchService {
+        -BatchRepository batchRepository
+        -BatchTypeRepository batchTypeRepository
+        -ClassRepository classRepository
+        -BatchMapper batchMapper
+        -BatchEventProducer eventProducer
+        --
+        +getAllBatches(Pageable) : Page<BatchDTO>
+        +getBatchById(Long) : BatchDTO
+        +createBatch(BatchDTO) : BatchDTO
+        +updateBatch(Long, BatchDTO) : BatchDTO
+        +deleteBatch(Long) : void
+        +assignClassToBatch(Long, Long) : BatchDTO
+    }
+    
+    class ClassService {
+        -ClassRepository classRepository
+        -ClassMapper classMapper
+        --
+        +getAllClasses() : List<ClassDTO>
+        +getClassById(Long) : ClassDTO
+        +createClass(ClassDTO) : ClassDTO
+        +updateClass(Long, ClassDTO) : ClassDTO
+        +deleteClass(Long) : void
+    }
+    
+    class MentorService {
+        -MentorRepository mentorRepository
+        -MentorMapper mentorMapper
+        --
+        +getAllMentors() : List<MentorDTO>
+        +getMentorById(Long) : MentorDTO
+        +createMentor(MentorDTO) : MentorDTO
+        +updateMentor(Long, MentorDTO) : MentorDTO
+        +deleteMentor(Long) : void
+    }
+    
+    class MentorSessionService {
+        -MentorSessionRepository mentorSessionRepository
+        -StudentRepository studentRepository
+        -MentorRepository mentorRepository
+        -MentorSessionMapper sessionMapper
+        -MentorSessionEventProducer eventProducer
+        --
+        +getAllSessions() : List<MentorSessionDTO>
+        +getSessionById(Long) : MentorSessionDTO
+        +createSession(MentorSessionDTO) : MentorSessionDTO
+        +updateSession(Long, MentorSessionDTO) : MentorSessionDTO
+        +deleteSession(Long) : void
+    }
+    
+    class DistributedLockService {
+        -RedisLockRegistry redisLockRegistry
+        --
+        +acquireLockWithRetry(String, Duration, int, Duration) : LockHandle
+        +releaseLock(LockHandle) : boolean
+        +extendLock(LockHandle, Duration) : boolean
+        +isLocked(String) : boolean
+        +executeWithLock(String, Duration, LockedTask) : T
+    }
+}
+
+' ============================================
+' CONTROLLER LAYER (REST API)
+' ============================================
+package "com.academy.controller" {
+    class StudentController {
+        -StudentService studentService
+        --
+        +getAllStudents(Long) : ResponseEntity<List<StudentDTO>>
+        +getAllStudentsPaged(Pageable) : ResponseEntity<Page<StudentDTO>>
+        +getStudentById(Long) : ResponseEntity<StudentDTO>
+        +createStudent(StudentDTO) : ResponseEntity<StudentDTO>
+        +updateStudent(Long, StudentDTO) : ResponseEntity<StudentDTO>
+        +deleteStudent(Long) : ResponseEntity<Void>
+    }
+    
+    class BatchController {
+        -BatchService batchService
+        --
+        +getAllBatches(Pageable) : ResponseEntity<Page<BatchDTO>>
+        +getBatchById(Long) : ResponseEntity<BatchDTO>
+        +createBatch(BatchDTO) : ResponseEntity<BatchDTO>
+        +updateBatch(Long, BatchDTO) : ResponseEntity<BatchDTO>
+        +deleteBatch(Long) : ResponseEntity<Void>
+        +assignClassToBatch(Long, Long) : ResponseEntity<BatchDTO>
+    }
+    
+    class ClassController {
+        -ClassService classService
+        --
+        +getAllClasses() : ResponseEntity<List<ClassDTO>>
+        +getClassById(Long) : ResponseEntity<ClassDTO>
+        +createClass(ClassDTO) : ResponseEntity<ClassDTO>
+        +updateClass(Long, ClassDTO) : ResponseEntity<ClassDTO>
+        +deleteClass(Long) : ResponseEntity<Void>
+    }
+    
+    class MentorController {
+        -MentorService mentorService
+        --
+        +getAllMentors() : ResponseEntity<List<MentorDTO>>
+        +getMentorById(Long) : ResponseEntity<MentorDTO>
+        +createMentor(MentorDTO) : ResponseEntity<MentorDTO>
+        +updateMentor(Long, MentorDTO) : ResponseEntity<MentorDTO>
+        +deleteMentor(Long) : ResponseEntity<Void>
+    }
+    
+    class MentorSessionController {
+        -MentorSessionService mentorSessionService
+        --
+        +getAllSessions() : ResponseEntity<List<MentorSessionDTO>>
+        +getSessionById(Long) : ResponseEntity<MentorSessionDTO>
+        +createSession(MentorSessionDTO) : ResponseEntity<MentorSessionDTO>
+        +updateSession(Long, MentorSessionDTO) : ResponseEntity<MentorSessionDTO>
+        +deleteSession(Long) : ResponseEntity<Void>
+    }
+    
+    class AuthController {
+        -JwtService jwtService
+        -UserRepository userRepository
+        --
+        +login(LoginRequest) : ResponseEntity<LoginResponse>
+        +validateToken(ValidateTokenRequest) : ResponseEntity<ValidateTokenResponse>
+    }
+}
+
+' ============================================
+' KAFKA LAYER (Event-Driven)
+' ============================================
+package "com.academy.kafka" {
+    class StudentEventProducer {
+        -KafkaTemplate<String, EventDTO> kafkaTemplate
+        --
+        +publishStudentRegisteredEvent(Student) : void
+    }
+    
+    class BatchEventProducer {
+        -KafkaTemplate<String, EventDTO> kafkaTemplate
+        --
+        +publishBatchCreatedEvent(Batch) : void
+    }
+    
+    class MentorSessionEventProducer {
+        -KafkaTemplate<String, EventDTO> kafkaTemplate
+        --
+        +publishSessionCreatedEvent(MentorSession) : void
+    }
+    
+    class EventConsumer {
+        -AuditEventRepository auditEventRepository
+        -ObjectMapper objectMapper
+        --
+        +consumeStudentRegistered(EventDTO) : void
+        +consumeMentorSessionCreated(EventDTO) : void
+        +consumeBatchCreated(EventDTO) : void
+        -saveAuditEvent(EventDTO) : void
+    }
+}
+
+' ============================================
+' ASPECT LAYER (AOP)
+' ============================================
+package "com.academy.aspect" {
+    class LockAspect {
+        -DistributedLockService lockService
+        -ExpressionParser parser
+        --
+        +executeWithLock(ProceedingJoinPoint, WithLock) : Object
+        -resolveLockKey(ProceedingJoinPoint, String) : String
+    }
+}
+
+' ============================================
+' RELATIONSHIPS
+' ============================================
+
+' Entity Relationships
+BatchType ||--o{ Batch : "has"
+Batch }o--|| Student : "contains"
+Batch }o--o{ ClassEntity : "has"
+Student ||--o{ MentorSession : "books"
+Mentor ||--o{ MentorSession : "conducts"
+Student ||--o{ StudentBatchHistory : "has history"
+StudentBatchHistory }o--|| Batch
+
+' Service to Repository
+StudentService ..> StudentRepository : uses
+StudentService ..> BatchRepository : uses
+BatchService ..> BatchRepository : uses
+BatchService ..> ClassRepository : uses
+ClassService ..> ClassRepository : uses
+MentorService ..> MentorRepository : uses
+MentorSessionService ..> MentorSessionRepository : uses
+MentorSessionService ..> StudentRepository : uses
+MentorSessionService ..> MentorRepository : uses
+
+' Controller to Service
+StudentController ..> StudentService : uses
+BatchController ..> BatchService : uses
+ClassController ..> ClassService : uses
+MentorController ..> MentorService : uses
+MentorSessionController ..> MentorSessionService : uses
+
+' Service to Kafka
+StudentService ..> StudentEventProducer : publishes
+BatchService ..> BatchEventProducer : publishes
+MentorSessionService ..> MentorSessionEventProducer : publishes
+EventConsumer ..> AuditEventRepository : saves
+
+' Aspect to Service
+LockAspect ..> DistributedLockService : uses
+StudentService ..> LockAspect : uses @WithLock
+BatchService ..> LockAspect : uses @WithLock
+
+' Repository to Entity
+StudentRepository ..> Student : manages
+BatchRepository ..> Batch : manages
+ClassRepository ..> ClassEntity : manages
+MentorRepository ..> Mentor : manages
+MentorSessionRepository ..> MentorSession : manages
+AuditEventRepository ..> AuditEvent : manages
+
+note right of MentorSession
+  **Key Feature: Book a Mentor Session**
+  Core entity for mentor session bookings
+  Supports bidirectional ratings
+end note
+
+note right of DistributedLockService
+  **Distributed Locking**
+  Prevents race conditions
+  Uses Redis for coordination
+end note
+
+note right of EventConsumer
+  **Event-Driven Architecture**
+  Consumes Kafka events
+  Stores in audit_events table
+end note
+
+@enduml
+

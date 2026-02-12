@@ -1,0 +1,118 @@
+@startuml ERD
+!theme plain
+skinparam linetype ortho
+
+entity "batch_type" {
+    * id : BIGINT <<PK>>
+    --
+    * name : VARCHAR(255) <<UNIQUE>>
+}
+
+entity "batches" {
+    * id : BIGINT <<PK>>
+    --
+    * name : VARCHAR(255)
+    * start_month : DATE
+    * current_instructor : VARCHAR(255)
+    * batch_type_id : BIGINT <<FK>>
+}
+
+entity "classes" {
+    * id : BIGINT <<PK>>
+    --
+    * name : VARCHAR(255)
+    * date : DATE
+    * time : TIME
+    * instructor : VARCHAR(255)
+}
+
+entity "batches_classes" {
+    * batch_id : BIGINT <<PK, FK>>
+    * class_id : BIGINT <<PK, FK>>
+}
+
+entity "students" {
+    * id : BIGINT <<PK>>
+    --
+    * name : VARCHAR(255)
+    graduation_year : INT
+    university_name : VARCHAR(255)
+    * email : VARCHAR(255) <<UNIQUE>>
+    phone_number : VARCHAR(20)
+    batch_id : BIGINT <<FK>>
+    buddy_id : BIGINT
+}
+
+entity "mentors" {
+    * id : BIGINT <<PK>>
+    --
+    * name : VARCHAR(255)
+    current_company : VARCHAR(255)
+}
+
+entity "mentor_sessions" {
+    * id : BIGINT <<PK>>
+    --
+    * time : TIMESTAMP
+    * duration_minutes : INT
+    * student_id : BIGINT <<FK>>
+    * mentor_id : BIGINT <<FK>>
+    student_rating : INT
+    mentor_rating : INT
+}
+
+entity "student_batch_history" {
+    * id : BIGINT <<PK>>
+    --
+    * student_id : BIGINT <<FK>>
+    * batch_id : BIGINT <<FK>>
+    * shift_date : DATE
+}
+
+entity "audit_events" {
+    * id : BIGINT <<PK>>
+    --
+    * event_type : VARCHAR(255)
+    * payload : TEXT
+    * created_at : TIMESTAMP
+}
+
+entity "users" {
+    * id : BIGINT <<PK>>
+    --
+    * username : VARCHAR(255) <<UNIQUE>>
+    * password : VARCHAR(255)
+    * role : VARCHAR(50)
+    * enabled : BOOLEAN
+}
+
+' Relationships
+batch_type ||--o{ batches : "has"
+batches ||--o{ students : "contains"
+batches }o--o{ classes : "has (via batches_classes)"
+batches_classes }o--|| batches
+batches_classes }o--|| classes
+students ||--o{ mentor_sessions : "books"
+mentors ||--o{ mentor_sessions : "conducts"
+students ||--o{ student_batch_history : "has history"
+student_batch_history }o--|| batches
+
+note right of mentor_sessions
+  Report: DB Schema Design
+  Core table for mentor session bookings
+end note
+
+note right of audit_events
+  Report: Kafka Integration
+  Stores consumed Kafka events
+end note
+
+note right of users
+  Report: Authentication
+  Stores user credentials for JWT authentication
+  Default users: admin@academy.com, user@academy.com
+  Password: password123 (BCrypt encoded)
+end note
+
+@enduml
+

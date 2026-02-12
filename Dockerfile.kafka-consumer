@@ -1,0 +1,11 @@
+# Dockerfile for Kafka Consumer module
+FROM eclipse-temurin:22-jre-alpine
+WORKDIR /app
+
+RUN apk add --no-cache wget
+
+# Copy Kafka Consumer JAR (built separately)
+COPY modules/academy-kafka-consumer/build/libs/academy-kafka-consumer-*.jar app.jar
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
+

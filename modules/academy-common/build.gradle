@@ -1,0 +1,34 @@
+dependencies {
+    // Spring Data JPA for entities
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    
+    // Spring Web for exceptions (ErrorResponse, ProblemDetail)
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    
+    // Validation
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    
+    // Jackson for JSON (including annotations)
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    
+    // Add to annotation processor path so Lombok can resolve enum constants
+    // This reduces false positive warnings about unknown enum constants
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+    annotationProcessor 'com.fasterxml.jackson.core:jackson-annotations'
+    
+    // Test dependencies
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:mysql'
+    testImplementation 'org.testcontainers:kafka'
+}
+
+// Suppress annotation processor warnings
+tasks.withType(JavaCompile) {
+    options.compilerArgs.addAll([
+        '-Xmaxwarns', '10000' // Allow many warnings (false positives from Lombok)
+    ])
+}
