@@ -1,6 +1,5 @@
 package com.academy.controller;
 
-import com.academy.dto.ClassDTO;
 import com.academy.generated.api.ClassesApi;
 import com.academy.generated.model.ClassInput;
 import com.academy.generated.model.ModelClass;
@@ -14,54 +13,43 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * Controller implementing generated ClassesApi interface
- * Uses generated request/response models from OpenAPI
- * Directly delegates to ClassService
- */
 @RestController
 @RequiredArgsConstructor
 @Slf4j
 public class ClassController implements ClassesApi {
-    
+
     private final ClassService classService;
-    private final ApiModelMapper apiModelMapper;
-    
+    private final ApiModelMapper mapper;
+
     @Override
     public ResponseEntity<ModelClass> createClass(ClassInput classInput) {
-        log.debug("Creating class: {}", classInput.getName());
-        ClassDTO dto = apiModelMapper.toDTO(classInput);
-        ClassDTO created = classService.createClass(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(apiModelMapper.toModel(created));
+        log.debug("POST /classes — name={}", classInput.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(mapper.toModel(classService.createClass(mapper.toDTO(classInput))));
     }
-    
+
+    @Override
+    public ResponseEntity<ModelClass> updateClass(Long id, ClassInput classInput) {
+        log.debug("PUT /classes/{}", id);
+        return ResponseEntity.ok(mapper.toModel(classService.updateClass(id, mapper.toDTO(classInput))));
+    }
+
     @Override
     public ResponseEntity<Void> deleteClass(Long id) {
-        log.debug("Deleting class: {}", id);
+        log.debug("DELETE /classes/{}", id);
         classService.deleteClass(id);
         return ResponseEntity.noContent().build();
     }
-    
-    @Override
-    public ResponseEntity<List<ModelClass>> getAllClasses() {
-        log.debug("Getting all classes");
-        List<ClassDTO> dtos = classService.getAllClasses();
-        return ResponseEntity.ok(apiModelMapper.toClassModelList(dtos));
-    }
-    
+
     @Override
     public ResponseEntity<ModelClass> getClassById(Long id) {
-        log.debug("Getting class by id: {}", id);
-        ClassDTO dto = classService.getClassById(id);
-        return ResponseEntity.ok(apiModelMapper.toModel(dto));
+        log.debug("GET /classes/{}", id);
+        return ResponseEntity.ok(mapper.toModel(classService.getClassById(id)));
     }
-    
+
     @Override
-    public ResponseEntity<ModelClass> updateClass(Long id, ClassInput classInput) {
-        log.debug("Updating class: {}", id);
-        ClassDTO dto = apiModelMapper.toDTO(classInput);
-        ClassDTO updated = classService.updateClass(id, dto);
-        return ResponseEntity.ok(apiModelMapper.toModel(updated));
+    public ResponseEntity<List<ModelClass>> getAllClasses() {
+        log.debug("GET /classes");
+        return ResponseEntity.ok(mapper.toClassModelList(classService.getAllClasses()));
     }
 }
-

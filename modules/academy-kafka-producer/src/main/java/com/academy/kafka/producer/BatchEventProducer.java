@@ -9,42 +9,46 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Kafka producer for batch events
- * Module: academy-kafka-producer
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class BatchEventProducer {
-    
+
     private final KafkaTemplate<String, EventDTO> kafkaTemplate;
-    
+
     @Value("${kafka.topics.batch-created:batch.created}")
-    private String batchCreatedTopic;
-    
+    private String topic;
+
     public void publishBatchCreatedEvent(Batch batch) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("batchId", batch.getId());
-        payload.put("name", batch.getName());
-        payload.put("batchTypeId", batch.getBatchType().getId());
-        payload.put("startMonth", batch.getStartMonth().toString());
-        
+        EventDTO event = buildEvent("batch.created", Map.of(
+            "batchId", batch.getId(),
+            "name", batch.getName(),
+            "batchTypeId", batch.getBatchType().getId(),
+            "startMonth", batch.getStartMonth().toString()
+        ));
+
+        dispatch(topic, event, batch.getId());
+    }
+
+    // -------------------------------------------------------------------------
+
+    private EventDTO buildEvent(String type, Map<String, Object> payload) {
         EventDTO event = new EventDTO();
-        event.setEventType("batch.created");
+        event.setEventType(type);
         event.setTimestamp(Instant.now());
         event.setPayload(payload);
-        
+        return event;
+    }
+
+    private void dispatch(String destination, EventDTO event, Object entityId) {
         try {
-            kafkaTemplate.send(batchCreatedTopic, event);
-            log.info("Published batch.created event for batch: {}", batch.getId());
-        } catch (Exception e) {
-            log.error("Error publishing batch.created event", e);
-            throw new RuntimeException("Failed to publish batch.created event", e);
+            kafkaTemplate.send(destination, event);
+            log.info("Event '{}' dispatched for entity id={}", event.getEventType(), entityId);
+        } catch (Exception ex) {
+            log.error("Failed to dispatch event '{}': {}", event.getEventType(), ex.getMessage());
+            throw new RuntimeException("Event dispatch failed: " + event.getEventType(), ex);
         }
     }
 }
-

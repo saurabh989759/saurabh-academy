@@ -17,90 +17,61 @@ const StudentsList = () => {
     if (window.confirm('Are you sure you want to delete this student?')) {
       try {
         await deleteStudent.mutateAsync(id)
-        // List will automatically refresh due to query invalidation in the hook
       } catch (err) {
-        // Error handled by toast notification
         console.error('Failed to delete student:', err)
       }
     }
   }
 
-  if (isLoading) {
-    return <LoadingSpinner text="Loading students..." />
-  }
-
-  if (error) {
-    return <ErrorDisplay error={error} title="Failed to load students" onRetry={() => refetch()} />
-  }
+  if (isLoading) return <LoadingSpinner text="Loading students..." />
+  if (error) return <ErrorDisplay error={error} title="Failed to load students" onRetry={() => refetch()} />
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Students</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Students</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Manage and view all enrolled students</p>
+        </div>
         <Link
           to="/students/new"
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors"
+          className="inline-flex items-center gap-2 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors shadow-sm"
         >
-          <PlusIcon className="w-5 h-5" />
-          Create Student
+          <PlusIcon className="w-4 h-4" />
+          Add Student
         </Link>
       </div>
 
       {data && data.content && data.content.length > 0 ? (
         <>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    University
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Actions
-                  </th>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <table className="min-w-full">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">Name</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">Email</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">University</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-slate-50">
                 {data.content.map((student: Student) => (
-                  <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                      {student.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {student.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {student.universityName || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-3">
-                        <Link
-                          to={`/students/${student.id}`}
-                          className="flex items-center gap-1 text-primary-600 hover:text-primary-900 dark:text-primary-400 transition-colors"
-                          title="View"
-                        >
-                          <EyeIcon className="w-4 h-4" />
-                          View
+                  <tr key={student.id} className="hover:bg-violet-50/40 transition-colors">
+                    <td className="px-6 py-4 text-sm font-semibold text-slate-900">{student.name}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{student.email}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{student.universityName || '—'}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <Link to={`/students/${student.id}`} className="inline-flex items-center gap-1 text-violet-600 hover:text-violet-800 text-sm font-medium transition-colors">
+                          <EyeIcon className="w-4 h-4" /> View
                         </Link>
-                        <Link
-                          to={`/students/${student.id}/edit`}
-                          className="flex items-center gap-1 text-blue-600 hover:text-blue-900 dark:text-blue-400 transition-colors"
-                          title="Edit"
-                        >
-                          <PencilIcon className="w-4 h-4" />
-                          Edit
+                        <Link to={`/students/${student.id}/edit`} className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors">
+                          <PencilIcon className="w-4 h-4" /> Edit
                         </Link>
                         <button
                           onClick={() => student.id && handleDelete(student.id)}
-                          className="flex items-center gap-1 text-red-600 hover:text-red-900 dark:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={!student.id || deleteStudent.isPending}
-                          title="Delete"
+                          className="inline-flex items-center gap-1 text-red-500 hover:text-red-700 text-sm font-medium transition-colors disabled:opacity-40"
                         >
                           <TrashIcon className="w-4 h-4" />
                           {deleteStudent.isPending ? 'Deleting...' : 'Delete'}
@@ -114,32 +85,34 @@ const StudentsList = () => {
           </div>
 
           {data.totalPages > 1 && (
-            <div className="mt-4 flex justify-center space-x-2">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={data.first}
-                className="px-4 py-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <span className="px-4 py-2">
+            <div className="mt-4 flex items-center justify-between">
+              <span className="text-sm text-slate-500">
                 Page {data.number + 1} of {data.totalPages}
               </span>
-              <button
-                onClick={() => setPage((p) => p + 1)}
-                disabled={data.last}
-                className="px-4 py-2 border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={data.first}
+                  className="px-4 py-2 text-sm font-medium bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={data.last}
+                  className="px-4 py-2 text-sm font-medium bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </>
       ) : (
         <EmptyState
           title="No students found"
-          description="Get started by creating your first student."
-          actionLabel="Create Student"
+          description="Get started by adding your first student."
+          actionLabel="Add Student"
           onAction={() => (window.location.href = '/students/new')}
         />
       )}
@@ -148,4 +121,3 @@ const StudentsList = () => {
 }
 
 export default StudentsList
-

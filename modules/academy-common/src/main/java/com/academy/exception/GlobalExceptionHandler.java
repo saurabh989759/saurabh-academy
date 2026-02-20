@@ -5,96 +5,87 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
-import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-/**
- * Global exception handler using Spring Problem Details (RFC 7807)
- * Report: Logging & error handling - Centralized exception handling
- */
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
-    
+
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ProblemDetail> handleResourceNotFoundException(ResourceNotFoundException ex) {
-        log.warn("Resource not found: {}", ex.getMessage());
+    public ResponseEntity<ProblemDetail> onResourceNotFound(ResourceNotFoundException ex) {
+        log.warn("Resource lookup failed: {}", ex.getMessage());
         return ResponseEntity.of(ex.getBody()).build();
     }
-    
+
     @ExceptionHandler(LockAcquisitionException.class)
-    public ResponseEntity<ProblemDetail> handleLockAcquisitionException(LockAcquisitionException ex) {
-        log.warn("Lock acquisition failed: {}", ex.getMessage());
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+    public ResponseEntity<ProblemDetail> onLockAcquisitionFailure(LockAcquisitionException ex) {
+        log.warn("Distributed lock could not be acquired: {}", ex.getMessage());
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(
             HttpStatus.CONFLICT,
-            "Resource is currently being processed by another request. Please try again."
+            "Another request is currently processing this resource — please retry shortly."
         );
-        problemDetail.setType(ExceptionConstants.LOCK_ERROR_TYPE);
-        problemDetail.setTitle("Concurrent Operation Conflict");
-        return ResponseEntity.of(problemDetail).build();
+        detail.setType(ExceptionConstants.LOCK_ERROR_TYPE);
+        detail.setTitle("Concurrent Operation Conflict");
+        return ResponseEntity.of(detail).build();
     }
-    
+
     @ExceptionHandler(OptimisticLockException.class)
-    public ResponseEntity<ProblemDetail> handleOptimisticLockException(OptimisticLockException ex) {
-        log.warn("Optimistic lock failure: {}", ex.getMessage());
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+    public ResponseEntity<ProblemDetail> onOptimisticLockConflict(OptimisticLockException ex) {
+        log.warn("Optimistic concurrency conflict: {}", ex.getMessage());
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(
             HttpStatus.CONFLICT,
-            "The resource was modified by another user. Please refresh and try again."
+            "The record was updated by someone else — please reload and try again."
         );
-        problemDetail.setType(ExceptionConstants.LOCK_ERROR_TYPE);
-        problemDetail.setTitle("Concurrent Modification Detected");
-        return ResponseEntity.of(problemDetail).build();
+        detail.setType(ExceptionConstants.LOCK_ERROR_TYPE);
+        detail.setTitle("Concurrent Modification Detected");
+        return ResponseEntity.of(detail).build();
     }
-    
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ProblemDetail> onValidationFailure(MethodArgumentNotValidException ex) {
+        log.warn("Request validation rejected: {}", ex.getMessage());
+
+        Map<String, String> violations = ex.getBindingResult().getAllErrors().stream()
+            .filter(e -> e instanceof FieldError)
+            .map(e -> (FieldError) e)
+            .collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage, (a, b) -> a));
+
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(
+            HttpStatus.BAD_REQUEST,
+            "One or more fields failed validation"
+        );
+        detail.setType(ExceptionConstants.VALIDATION_ERROR_TYPE);
+        detail.setTitle("Validation Error");
+        detail.setProperty("errors", violations);
+        return ResponseEntity.of(detail).build();
+    }
+
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ProblemDetail> handleRuntimeException(RuntimeException ex) {
-        log.error("Runtime exception: ", ex);
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.BAD_REQUEST, 
+    public ResponseEntity<ProblemDetail> onRuntimeException(RuntimeException ex) {
+        log.error("Runtime error encountered: ", ex);
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(
+            HttpStatus.BAD_REQUEST,
             ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred"
         );
-        problemDetail.setType(ExceptionConstants.RUNTIME_ERROR_TYPE);
-        problemDetail.setTitle("Runtime Error");
-        return ResponseEntity.of(problemDetail).build();
+        detail.setType(ExceptionConstants.RUNTIME_ERROR_TYPE);
+        detail.setTitle("Runtime Error");
+        return ResponseEntity.of(detail).build();
     }
-    
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ProblemDetail> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        log.warn("Validation error: {}", ex.getMessage());
-        
-        Map<String, String> fieldErrors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            fieldErrors.put(fieldName, errorMessage);
-        });
-        
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
-            HttpStatus.BAD_REQUEST,
-            "Validation failed for one or more fields"
-        );
-        problemDetail.setType(ExceptionConstants.VALIDATION_ERROR_TYPE);
-        problemDetail.setTitle("Validation Error");
-        problemDetail.setProperty("errors", fieldErrors);
-        
-        return ResponseEntity.of(problemDetail).build();
-    }
-    
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ProblemDetail> handleGenericException(Exception ex) {
-        log.error("Unexpected exception: ", ex);
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+    public ResponseEntity<ProblemDetail> onUnhandledException(Exception ex) {
+        log.error("Unhandled exception: ", ex);
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(
             HttpStatus.INTERNAL_SERVER_ERROR,
-            "An internal server error occurred"
+            "An internal error occurred — please contact support if the issue persists."
         );
-        problemDetail.setType(ExceptionConstants.INTERNAL_ERROR_TYPE);
-        problemDetail.setTitle("Internal Server Error");
-        return ResponseEntity.of(problemDetail).build();
+        detail.setType(ExceptionConstants.INTERNAL_ERROR_TYPE);
+        detail.setTitle("Internal Server Error");
+        return ResponseEntity.of(detail).build();
     }
 }
-

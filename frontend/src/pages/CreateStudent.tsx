@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useCreateStudent } from '../hooks/useStudents'
 import { StudentInput } from '../api/students'
 
+const inputClass = "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all placeholder:text-slate-400"
+const labelClass = "block text-sm font-semibold text-slate-700 mb-1.5"
+
 const CreateStudent = () => {
   const navigate = useNavigate()
   const createStudent = useCreateStudent()
@@ -17,114 +20,65 @@ const CreateStudent = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Prevent double submission
-    if (createStudent.isPending) {
-      return
-    }
+    if (createStudent.isPending) return
     try {
-      const result = await createStudent.mutateAsync(formData)
-      // Navigate after successful creation
+      await createStudent.mutateAsync(formData)
       navigate('/students')
-    } catch (error) {
-      // Error handling is done in the mutation
-    }
+    } catch (error) {}
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Create Student</h1>
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-4">
+    <div className="max-w-2xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Add Student</h1>
+        <p className="text-sm text-slate-500 mt-0.5">Fill in the details to create a new student</p>
+      </div>
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 space-y-5">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Name *
-          </label>
-          <input
-            id="name"
-            type="text"
-            required
-            value={formData.name}
+          <label htmlFor="name" className={labelClass}>Name <span className="text-red-500">*</span></label>
+          <input id="name" type="text" required value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
+            className={inputClass} placeholder="Alice Smith" />
         </div>
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Email *
-          </label>
-          <input
-            id="email"
-            type="email"
-            required
-            value={formData.email}
+          <label htmlFor="email" className={labelClass}>Email <span className="text-red-500">*</span></label>
+          <input id="email" type="email" required value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
+            className={inputClass} placeholder="alice@example.com" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="graduationYear" className={labelClass}>Graduation Year</label>
+            <input id="graduationYear" type="number" value={formData.graduationYear || ''}
+              onChange={(e) => setFormData({ ...formData, graduationYear: e.target.value ? parseInt(e.target.value) : undefined })}
+              className={inputClass} placeholder="2024" />
+          </div>
+          <div>
+            <label htmlFor="batchId" className={labelClass}>Batch ID</label>
+            <input id="batchId" type="number" value={formData.batchId || ''}
+              onChange={(e) => setFormData({ ...formData, batchId: e.target.value ? parseInt(e.target.value) : undefined })}
+              className={inputClass} placeholder="1" />
+          </div>
         </div>
         <div>
-          <label htmlFor="graduationYear" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Graduation Year
-          </label>
-          <input
-            id="graduationYear"
-            type="number"
-            value={formData.graduationYear || ''}
-            onChange={(e) =>
-              setFormData({ ...formData, graduationYear: e.target.value ? parseInt(e.target.value) : undefined })
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
-        </div>
-        <div>
-          <label htmlFor="universityName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            University
-          </label>
-          <input
-            id="universityName"
-            type="text"
-            value={formData.universityName}
+          <label htmlFor="universityName" className={labelClass}>University</label>
+          <input id="universityName" type="text" value={formData.universityName}
             onChange={(e) => setFormData({ ...formData, universityName: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
+            className={inputClass} placeholder="State University" />
         </div>
         <div>
-          <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Phone Number
-          </label>
-          <input
-            id="phoneNumber"
-            type="tel"
-            value={formData.phoneNumber}
+          <label htmlFor="phoneNumber" className={labelClass}>Phone Number</label>
+          <input id="phoneNumber" type="tel" value={formData.phoneNumber}
             onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
+            className={inputClass} placeholder="123-456-7890" />
         </div>
-        <div>
-          <label htmlFor="batchId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Batch ID
-          </label>
-          <input
-            id="batchId"
-            type="number"
-            value={formData.batchId || ''}
-            onChange={(e) =>
-              setFormData({ ...formData, batchId: e.target.value ? parseInt(e.target.value) : undefined })
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
-        </div>
-        <div className="flex space-x-4 pt-4">
-          <button
-            type="submit"
-            disabled={createStudent.isPending}
-            className="flex-1 bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50"
-          >
+        <div className="flex gap-3 pt-2">
+          <button type="submit" disabled={createStudent.isPending}
+            className="flex-1 bg-violet-600 text-white py-2.5 px-4 rounded-xl font-semibold hover:bg-violet-700 transition-colors disabled:opacity-50">
             {createStudent.isPending ? 'Creating...' : 'Create Student'}
           </button>
-          <button
-            type="button"
-            onClick={() => navigate('/students')}
-            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-white"
-          >
+          <button type="button" onClick={() => navigate('/students')}
+            className="flex-1 bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl font-semibold hover:bg-slate-200 transition-colors">
             Cancel
           </button>
         </div>
@@ -134,4 +88,3 @@ const CreateStudent = () => {
 }
 
 export default CreateStudent
-

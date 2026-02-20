@@ -2,32 +2,27 @@ package com.academy.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-/**
- * DTO for Student entity
- */
-@Data
+@Getter
+@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class StudentDTO {
+
     private Long id;
-    
-    @NotBlank(message = "Name is required")
+
+    @NotBlank(message = "Student name must not be blank")
     private String name;
-    
-    private Integer graduationYear;
-    private String universityName;
-    
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
+
+    @NotBlank(message = "Email address is mandatory")
+    @Email(message = "Provide a valid email address")
     private String email;
-    
+
     private String phoneNumber;
-    
+    private String universityName;
+    private Integer graduationYear;
     private Long batchId;
     private Long buddyId;
 }
-

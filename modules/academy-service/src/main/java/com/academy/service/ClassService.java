@@ -13,59 +13,49 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
-/**
- * Service for Class operations
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ClassService {
-    
+
     private final ClassRepository classRepository;
     private final ClassMapper classMapper;
-    
+
     @Transactional(readOnly = true)
-    @Cacheable(value = "classes", key = "'all'", unless = "#result == null || #result.isEmpty()")
     public List<ClassDTO> getAllClasses() {
         return classRepository.findAll().stream()
             .map(classMapper::toDTO)
-            .collect(Collectors.toList());
+            .toList();
     }
-    
+
     @Transactional(readOnly = true)
     @Cacheable(value = "class", key = "'class:' + #id", unless = "#result == null")
     public ClassDTO getClassById(Long id) {
-        ClassEntity classEntity = classRepository.findById(id)
-            .orElseThrow(() -> new ClassNotFoundException(id));
-        return classMapper.toDTO(classEntity);
+        return classMapper.toDTO(fetchOrThrow(id));
     }
-    
+
     @Transactional
     @CacheEvict(value = {"class", "classes"}, allEntries = true)
-    public ClassDTO createClass(ClassDTO dto) {
-        ClassEntity classEntity = classMapper.toEntity(dto);
-        ClassEntity saved = classRepository.save(classEntity);
-        log.info("Class created with id: {}", saved.getId());
+    public ClassDTO createClass(ClassDTO request) {
+        ClassEntity saved = classRepository.save(classMapper.toEntity(request));
+        log.info("New class scheduled with id={}", saved.getId());
         return classMapper.toDTO(saved);
     }
-    
+
     @Transactional
     @CacheEvict(value = {"class", "classes"}, key = "'class:' + #id", allEntries = true)
-    public ClassDTO updateClass(Long id, ClassDTO dto) {
-        ClassEntity classEntity = classRepository.findById(id)
-            .orElseThrow(() -> new ClassNotFoundException(id));
-        
-        classEntity.setName(dto.getName());
-        classEntity.setDate(dto.getDate());
-        classEntity.setTime(dto.getTime());
-        classEntity.setInstructor(dto.getInstructor());
-        
-        ClassEntity updated = classRepository.save(classEntity);
-        return classMapper.toDTO(updated);
+    public ClassDTO updateClass(Long id, ClassDTO request) {
+        ClassEntity target = fetchOrThrow(id);
+
+        target.setName(request.getName());
+        target.setInstructor(request.getInstructor());
+        target.setDate(request.getDate());
+        target.setTime(request.getTime());
+
+        return classMapper.toDTO(classRepository.save(target));
     }
-    
+
     @Transactional
     @CacheEvict(value = {"class", "classes"}, key = "'class:' + #id", allEntries = true)
     public void deleteClass(Long id) {
@@ -73,6 +63,12 @@ public class ClassService {
             throw new ClassNotFoundException(id);
         }
         classRepository.deleteById(id);
-        log.info("Class deleted with id: {}", id);
+        log.info("Class {} removed", id);
+    }
+
+    // -------------------------------------------------------------------------
+
+    private ClassEntity fetchOrThrow(Long id) {
+        return classRepository.findById(id).orElseThrow(() -> new ClassNotFoundException(id));
     }
 }

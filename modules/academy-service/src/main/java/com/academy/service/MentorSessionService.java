@@ -20,90 +20,76 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
-/**
- * Service for MentorSession operations
- * Report: Feature Development Process - Core service for "Book a Mentor Session" feature
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class MentorSessionService {
-    
+
     private final MentorSessionRepository sessionRepository;
     private final StudentRepository studentRepository;
     private final MentorRepository mentorRepository;
     private final MentorSessionMapper sessionMapper;
     private final MentorSessionEventProducer eventProducer;
-    
+
     @Transactional(readOnly = true)
-    @Cacheable(value = "mentorSessions", key = "'all'", unless = "#result == null || #result.isEmpty()")
     public List<MentorSessionDTO> getAllSessions() {
         return sessionRepository.findAll().stream()
             .map(sessionMapper::toDTO)
-            .collect(Collectors.toList());
+            .toList();
     }
-    
+
     @Transactional(readOnly = true)
     @Cacheable(value = "mentorSession", key = "'mentorSession:' + #id", unless = "#result == null")
     public MentorSessionDTO getSessionById(Long id) {
-        MentorSession session = sessionRepository.findById(id)
-            .orElseThrow(() -> new MentorSessionNotFoundException(id));
-        return sessionMapper.toDTO(session);
+        return sessionMapper.toDTO(fetchOrThrow(id));
     }
-    
+
     @Transactional
     @CacheEvict(value = {"mentorSession", "mentorSessions"}, allEntries = true)
-    public MentorSessionDTO createSession(MentorSessionDTO dto) {
-        log.info("Creating mentor session for student: {} with mentor: {}", dto.getStudentId(), dto.getMentorId());
-        
-        Student student = studentRepository.findById(dto.getStudentId())
-            .orElseThrow(() -> new StudentNotFoundException(dto.getStudentId()));
-        
-        Mentor mentor = mentorRepository.findById(dto.getMentorId())
-            .orElseThrow(() -> new MentorNotFoundException(dto.getMentorId()));
-        
-        MentorSession session = sessionMapper.toEntity(dto);
+    public MentorSessionDTO createSession(MentorSessionDTO request) {
+        log.info("Booking session between student {} and mentor {}", request.getStudentId(), request.getMentorId());
+
+        Student student = studentRepository.findById(request.getStudentId())
+            .orElseThrow(() -> new StudentNotFoundException(request.getStudentId()));
+
+        Mentor mentor = mentorRepository.findById(request.getMentorId())
+            .orElseThrow(() -> new MentorNotFoundException(request.getMentorId()));
+
+        MentorSession session = sessionMapper.toEntity(request);
         session.setStudent(student);
         session.setMentor(mentor);
-        
-        MentorSession saved = sessionRepository.save(session);
-        log.info("Mentor session created with id: {}", saved.getId());
-        
-        // Report: Feature Development Process - Publish Kafka event after session creation
-        eventProducer.publishSessionCreatedEvent(saved);
-        
-        return sessionMapper.toDTO(saved);
+
+        MentorSession persisted = sessionRepository.save(session);
+        log.info("Session booked with id={}", persisted.getId());
+        eventProducer.publishSessionCreatedEvent(persisted);
+
+        return sessionMapper.toDTO(persisted);
     }
-    
+
     @Transactional
     @CacheEvict(value = {"mentorSession", "mentorSessions"}, key = "'mentorSession:' + #id", allEntries = true)
-    public MentorSessionDTO updateSession(Long id, MentorSessionDTO dto) {
-        MentorSession session = sessionRepository.findById(id)
-            .orElseThrow(() -> new MentorSessionNotFoundException(id));
-        
-        session.setTime(java.sql.Timestamp.from(dto.getTime()));
-        session.setDurationMinutes(dto.getDurationMinutes());
-        session.setStudentRating(dto.getStudentRating());
-        session.setMentorRating(dto.getMentorRating());
-        
-        if (dto.getStudentId() != null) {
-            Student student = studentRepository.findById(dto.getStudentId())
-                .orElseThrow(() -> new StudentNotFoundException(dto.getStudentId()));
-            session.setStudent(student);
+    public MentorSessionDTO updateSession(Long id, MentorSessionDTO request) {
+        MentorSession session = fetchOrThrow(id);
+
+        session.setTime(java.sql.Timestamp.from(request.getTime()));
+        session.setDurationMinutes(request.getDurationMinutes());
+        session.setStudentRating(request.getStudentRating());
+        session.setMentorRating(request.getMentorRating());
+
+        if (request.getStudentId() != null) {
+            session.setStudent(studentRepository.findById(request.getStudentId())
+                .orElseThrow(() -> new StudentNotFoundException(request.getStudentId())));
         }
-        
-        if (dto.getMentorId() != null) {
-            Mentor mentor = mentorRepository.findById(dto.getMentorId())
-                .orElseThrow(() -> new MentorNotFoundException(dto.getMentorId()));
-            session.setMentor(mentor);
+
+        if (request.getMentorId() != null) {
+            session.setMentor(mentorRepository.findById(request.getMentorId())
+                .orElseThrow(() -> new MentorNotFoundException(request.getMentorId())));
         }
-        
-        MentorSession updated = sessionRepository.save(session);
-        return sessionMapper.toDTO(updated);
+
+        return sessionMapper.toDTO(sessionRepository.save(session));
     }
-    
+
     @Transactional
     @CacheEvict(value = {"mentorSession", "mentorSessions"}, key = "'mentorSession:' + #id", allEntries = true)
     public void deleteSession(Long id) {
@@ -111,6 +97,12 @@ public class MentorSessionService {
             throw new MentorSessionNotFoundException(id);
         }
         sessionRepository.deleteById(id);
-        log.info("Mentor session deleted with id: {}", id);
+        log.info("Session {} cancelled and removed", id);
+    }
+
+    // -------------------------------------------------------------------------
+
+    private MentorSession fetchOrThrow(Long id) {
+        return sessionRepository.findById(id).orElseThrow(() -> new MentorSessionNotFoundException(id));
     }
 }

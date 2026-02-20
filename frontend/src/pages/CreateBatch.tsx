@@ -2,16 +2,17 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCreateBatch } from '../hooks/useBatches'
 import { BatchInput } from '../api/batches'
+import { useBatchTypes } from '../hooks/useBatchTypes'
+
+const inputClass = "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all placeholder:text-slate-400"
+const labelClass = "block text-sm font-semibold text-slate-700 mb-1.5"
 
 const CreateBatch = () => {
   const navigate = useNavigate()
   const createBatch = useCreateBatch()
+  const { data: batchTypes } = useBatchTypes()
   const [formData, setFormData] = useState<BatchInput>({
-    name: '',
-    startMonth: '',
-    currentInstructor: '',
-    batchTypeId: 1,
-    classIds: [],
+    name: '', startMonth: '', currentInstructor: '', batchTypeId: 1, classIds: [],
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,102 +20,62 @@ const CreateBatch = () => {
     try {
       const result = await createBatch.mutateAsync(formData)
       navigate(`/batches/${result.id}`)
-    } catch (error) {
-      // Error handling is done in the mutation
-    }
+    } catch (error) {}
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Create Batch</h1>
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-4">
+    <div className="max-w-2xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Add Batch</h1>
+        <p className="text-sm text-slate-500 mt-0.5">Fill in the details to create a new batch</p>
+      </div>
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 space-y-5">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Name *
-          </label>
-          <input
-            id="name"
-            type="text"
-            required
-            value={formData.name}
+          <label htmlFor="name" className={labelClass}>Name <span className="text-red-500">*</span></label>
+          <input id="name" type="text" required value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            placeholder="FSD-2024-03"
-          />
+            className={inputClass} placeholder="FSD-2024-03" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="startMonth" className={labelClass}>Start Month <span className="text-red-500">*</span></label>
+            <input id="startMonth" type="date" required value={formData.startMonth}
+              onChange={(e) => setFormData({ ...formData, startMonth: e.target.value })} className={inputClass} />
+          </div>
+          <div>
+            <label htmlFor="batchTypeId" className={labelClass}>Batch Type <span className="text-red-500">*</span></label>
+            <select id="batchTypeId" required value={formData.batchTypeId}
+              onChange={(e) => setFormData({ ...formData, batchTypeId: parseInt(e.target.value) })}
+              className={inputClass}>
+              <option value="">Select a batch type</option>
+              {batchTypes?.map((bt) => (
+                <option key={bt.id} value={bt.id}>{bt.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div>
-          <label htmlFor="startMonth" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Start Month *
-          </label>
-          <input
-            id="startMonth"
-            type="date"
-            required
-            value={formData.startMonth}
-            onChange={(e) => setFormData({ ...formData, startMonth: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
-        </div>
-        <div>
-          <label htmlFor="currentInstructor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Instructor *
-          </label>
-          <input
-            id="currentInstructor"
-            type="text"
-            required
-            value={formData.currentInstructor}
+          <label htmlFor="currentInstructor" className={labelClass}>Instructor <span className="text-red-500">*</span></label>
+          <input id="currentInstructor" type="text" required value={formData.currentInstructor}
             onChange={(e) => setFormData({ ...formData, currentInstructor: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            placeholder="John Instructor"
-          />
+            className={inputClass} placeholder="John Instructor" />
         </div>
         <div>
-          <label htmlFor="batchTypeId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Batch Type ID *
-          </label>
-          <input
-            id="batchTypeId"
-            type="number"
-            required
-            min="1"
-            value={formData.batchTypeId}
-            onChange={(e) => setFormData({ ...formData, batchTypeId: parseInt(e.target.value) })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
-        </div>
-        <div>
-          <label htmlFor="classIds" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Class IDs (comma-separated)
-          </label>
-          <input
-            id="classIds"
-            type="text"
-            value={formData.classIds?.join(',') || ''}
+          <label htmlFor="classIds" className={labelClass}>Class IDs <span className="text-slate-400 font-normal">(comma-separated)</span></label>
+          <input id="classIds" type="text" value={formData.classIds?.join(',') || ''}
             onChange={(e) => {
-              const ids = e.target.value
-                .split(',')
-                .map((id) => parseInt(id.trim()))
-                .filter((id) => !isNaN(id))
+              const ids = e.target.value.split(',').map((id) => parseInt(id.trim())).filter((id) => !isNaN(id))
               setFormData({ ...formData, classIds: ids })
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            placeholder="1, 2, 3"
-          />
+            className={inputClass} placeholder="1, 2, 3" />
         </div>
-        <div className="flex space-x-4 pt-4">
-          <button
-            type="submit"
-            disabled={createBatch.isPending}
-            className="flex-1 bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50"
-          >
+        <div className="flex gap-3 pt-2">
+          <button type="submit" disabled={createBatch.isPending}
+            className="flex-1 bg-violet-600 text-white py-2.5 px-4 rounded-xl font-semibold hover:bg-violet-700 transition-colors disabled:opacity-50">
             {createBatch.isPending ? 'Creating...' : 'Create Batch'}
           </button>
-          <button
-            type="button"
-            onClick={() => navigate('/batches')}
-            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-white"
-          >
+          <button type="button" onClick={() => navigate('/batches')}
+            className="flex-1 bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl font-semibold hover:bg-slate-200 transition-colors">
             Cancel
           </button>
         </div>
@@ -124,4 +85,3 @@ const CreateBatch = () => {
 }
 
 export default CreateBatch
-

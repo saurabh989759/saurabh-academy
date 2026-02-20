@@ -1,22 +1,19 @@
 package com.academy.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-/**
- * DTO for Mentor entity
- */
-@Data
+@Getter
+@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class MentorDTO {
+
     private Long id;
-    
-    @NotBlank(message = "Name is required")
+
+    @NotBlank(message = "Mentor name must not be blank")
     private String name;
-    
+
     private String currentCompany;
 }
-

@@ -13,57 +13,45 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
-/**
- * Service for Mentor operations
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class MentorService {
-    
+
     private final MentorRepository mentorRepository;
     private final MentorMapper mentorMapper;
-    
+
     @Transactional(readOnly = true)
-    @Cacheable(value = "mentors", key = "'all'", unless = "#result == null || #result.isEmpty()")
     public List<MentorDTO> getAllMentors() {
         return mentorRepository.findAll().stream()
             .map(mentorMapper::toDTO)
-            .collect(Collectors.toList());
+            .toList();
     }
-    
+
     @Transactional(readOnly = true)
     @Cacheable(value = "mentor", key = "'mentor:' + #id", unless = "#result == null")
     public MentorDTO getMentorById(Long id) {
-        Mentor mentor = mentorRepository.findById(id)
-            .orElseThrow(() -> new MentorNotFoundException(id));
-        return mentorMapper.toDTO(mentor);
+        return mentorMapper.toDTO(fetchOrThrow(id));
     }
-    
+
     @Transactional
     @CacheEvict(value = {"mentor", "mentors"}, allEntries = true)
-    public MentorDTO createMentor(MentorDTO dto) {
-        Mentor mentor = mentorMapper.toEntity(dto);
-        Mentor saved = mentorRepository.save(mentor);
-        log.info("Mentor created with id: {}", saved.getId());
-        return mentorMapper.toDTO(saved);
+    public MentorDTO createMentor(MentorDTO request) {
+        Mentor persisted = mentorRepository.save(mentorMapper.toEntity(request));
+        log.info("Mentor onboarded with id={}", persisted.getId());
+        return mentorMapper.toDTO(persisted);
     }
-    
+
     @Transactional
     @CacheEvict(value = {"mentor", "mentors"}, key = "'mentor:' + #id", allEntries = true)
-    public MentorDTO updateMentor(Long id, MentorDTO dto) {
-        Mentor mentor = mentorRepository.findById(id)
-            .orElseThrow(() -> new MentorNotFoundException(id));
-        
-        mentor.setName(dto.getName());
-        mentor.setCurrentCompany(dto.getCurrentCompany());
-        
-        Mentor updated = mentorRepository.save(mentor);
-        return mentorMapper.toDTO(updated);
+    public MentorDTO updateMentor(Long id, MentorDTO request) {
+        Mentor mentor = fetchOrThrow(id);
+        mentor.setName(request.getName());
+        mentor.setCurrentCompany(request.getCurrentCompany());
+        return mentorMapper.toDTO(mentorRepository.save(mentor));
     }
-    
+
     @Transactional
     @CacheEvict(value = {"mentor", "mentors"}, key = "'mentor:' + #id", allEntries = true)
     public void deleteMentor(Long id) {
@@ -71,6 +59,12 @@ public class MentorService {
             throw new MentorNotFoundException(id);
         }
         mentorRepository.deleteById(id);
-        log.info("Mentor deleted with id: {}", id);
+        log.info("Mentor {} removed", id);
+    }
+
+    // -------------------------------------------------------------------------
+
+    private Mentor fetchOrThrow(Long id) {
+        return mentorRepository.findById(id).orElseThrow(() -> new MentorNotFoundException(id));
     }
 }

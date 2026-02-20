@@ -1,6 +1,5 @@
 package com.academy.controller;
 
-import com.academy.dto.MentorSessionDTO;
 import com.academy.generated.api.MentorSessionsApi;
 import com.academy.generated.model.MentorSession;
 import com.academy.generated.model.MentorSessionInput;
@@ -14,55 +13,43 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * Controller implementing generated MentorSessionsApi interface
- * Uses generated request/response models from OpenAPI
- * Directly delegates to MentorSessionService
- */
 @RestController
 @RequiredArgsConstructor
 @Slf4j
 public class MentorSessionController implements MentorSessionsApi {
-    
+
     private final MentorSessionService mentorSessionService;
-    private final ApiModelMapper apiModelMapper;
-    
+    private final ApiModelMapper mapper;
+
     @Override
-    public ResponseEntity<MentorSession> createMentorSession(MentorSessionInput mentorSessionInput) {
-        log.debug("Creating mentor session for student: {} with mentor: {}", 
-            mentorSessionInput.getStudentId(), mentorSessionInput.getMentorId());
-        MentorSessionDTO dto = apiModelMapper.toDTO(mentorSessionInput);
-        MentorSessionDTO created = mentorSessionService.createSession(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(apiModelMapper.toModel(created));
+    public ResponseEntity<MentorSession> createMentorSession(MentorSessionInput input) {
+        log.debug("POST /mentor-sessions — student={} mentor={}", input.getStudentId(), input.getMentorId());
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(mapper.toModel(mentorSessionService.createSession(mapper.toDTO(input))));
     }
-    
+
+    @Override
+    public ResponseEntity<MentorSession> updateMentorSession(Long id, MentorSessionInput input) {
+        log.debug("PUT /mentor-sessions/{}", id);
+        return ResponseEntity.ok(mapper.toModel(mentorSessionService.updateSession(id, mapper.toDTO(input))));
+    }
+
     @Override
     public ResponseEntity<Void> deleteMentorSession(Long id) {
-        log.debug("Deleting mentor session: {}", id);
+        log.debug("DELETE /mentor-sessions/{}", id);
         mentorSessionService.deleteSession(id);
         return ResponseEntity.noContent().build();
     }
-    
-    @Override
-    public ResponseEntity<List<MentorSession>> getAllMentorSessions() {
-        log.debug("Getting all mentor sessions");
-        List<MentorSessionDTO> dtos = mentorSessionService.getAllSessions();
-        return ResponseEntity.ok(apiModelMapper.toMentorSessionModelList(dtos));
-    }
-    
+
     @Override
     public ResponseEntity<MentorSession> getMentorSessionById(Long id) {
-        log.debug("Getting mentor session by id: {}", id);
-        MentorSessionDTO dto = mentorSessionService.getSessionById(id);
-        return ResponseEntity.ok(apiModelMapper.toModel(dto));
+        log.debug("GET /mentor-sessions/{}", id);
+        return ResponseEntity.ok(mapper.toModel(mentorSessionService.getSessionById(id)));
     }
-    
+
     @Override
-    public ResponseEntity<MentorSession> updateMentorSession(Long id, MentorSessionInput mentorSessionInput) {
-        log.debug("Updating mentor session: {}", id);
-        MentorSessionDTO dto = apiModelMapper.toDTO(mentorSessionInput);
-        MentorSessionDTO updated = mentorSessionService.updateSession(id, dto);
-        return ResponseEntity.ok(apiModelMapper.toModel(updated));
+    public ResponseEntity<List<MentorSession>> getAllMentorSessions() {
+        log.debug("GET /mentor-sessions");
+        return ResponseEntity.ok(mapper.toMentorSessionModelList(mentorSessionService.getAllSessions()));
     }
 }
-

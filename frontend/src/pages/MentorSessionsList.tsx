@@ -10,9 +10,8 @@ import { EyeIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/icons/Ic
 const MentorSessionsList = () => {
   const navigate = useNavigate()
   const { data: sessions, isLoading, error, refetch } = useMentorSessions()
-  const deleteSession = useDeleteMentorSession() // Move hook before conditional returns
+  const deleteSession = useDeleteMentorSession()
 
-  // Debug logging
   React.useEffect(() => {
     if (sessions) {
       console.log('📦 Mentor sessions data received:', sessions)
@@ -27,104 +26,79 @@ const MentorSessionsList = () => {
     if (window.confirm('Are you sure you want to delete this mentor session?')) {
       try {
         await deleteSession.mutateAsync(id)
-        // List will automatically refresh due to query invalidation in the hook
       } catch (err) {
-        // Error handled by toast notification
         console.error('Failed to delete mentor session:', err)
       }
     }
   }
 
-  if (isLoading) {
-    return <LoadingSpinner text="Loading mentor sessions..." />
-  }
-
-  if (error) {
-    return (
-      <ErrorDisplay error={error} title="Failed to load mentor sessions" onRetry={() => refetch()} />
-    )
-  }
+  if (isLoading) return <LoadingSpinner text="Loading mentor sessions..." />
+  if (error) return <ErrorDisplay error={error} title="Failed to load mentor sessions" onRetry={() => refetch()} />
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Mentor Sessions</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Mentor Sessions</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Track and manage all mentor-student sessions</p>
+        </div>
         <button
           onClick={() => navigate('/mentor-sessions/new')}
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors"
+          className="inline-flex items-center gap-2 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors shadow-sm"
           type="button"
         >
-          <PlusIcon className="w-5 h-5" />
+          <PlusIcon className="w-4 h-4" />
           Book Session
         </button>
       </div>
 
       {sessions && sessions.length > 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Time
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Duration
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Student ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Mentor ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Actions
-                </th>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-slate-100">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">Time</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">Duration</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">Student ID</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">Mentor ID</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-slate-50">
               {sessions.map((session: MentorSession) => (
-                <tr key={session.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {session.time ? new Date(session.time).toLocaleString() : '-'}
+                <tr key={session.id} className="hover:bg-violet-50/40 transition-colors">
+                  <td className="px-6 py-4 text-sm font-semibold text-slate-900">
+                    {session.time ? new Date(session.time).toLocaleString() : '—'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {session.durationMinutes ? `${session.durationMinutes} min` : '-'}
+                  <td className="px-6 py-4 text-sm text-slate-500">
+                    {session.durationMinutes ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-violet-50 text-violet-700 text-xs font-medium">
+                        {session.durationMinutes} min
+                      </span>
+                    ) : '—'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {session.studentId || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {session.mentorId || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-3">
+                  <td className="px-6 py-4 text-sm text-slate-500">{session.studentId || '—'}</td>
+                  <td className="px-6 py-4 text-sm text-slate-500">{session.mentorId || '—'}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-4">
                       <button
-                        onClick={() => {
-                          if (session.id) navigate(`/mentor-sessions/${session.id}`)
-                        }}
-                        className="flex items-center gap-1 text-primary-600 hover:text-primary-900 dark:text-primary-400 transition-colors"
-                        title="View"
+                        onClick={() => session.id && navigate(`/mentor-sessions/${session.id}`)}
+                        className="inline-flex items-center gap-1 text-violet-600 hover:text-violet-800 text-sm font-medium transition-colors"
                         type="button"
                       >
-                        <EyeIcon className="w-4 h-4" />
-                        View
+                        <EyeIcon className="w-4 h-4" /> View
                       </button>
                       <button
-                        onClick={() => {
-                          if (session.id) navigate(`/mentor-sessions/${session.id}/edit`)
-                        }}
-                        className="flex items-center gap-1 text-blue-600 hover:text-blue-900 dark:text-blue-400 transition-colors"
-                        title="Edit"
+                        onClick={() => session.id && navigate(`/mentor-sessions/${session.id}/edit`)}
+                        className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors"
                         type="button"
                       >
-                        <PencilIcon className="w-4 h-4" />
-                        Edit
+                        <PencilIcon className="w-4 h-4" /> Edit
                       </button>
                       <button
                         onClick={() => session.id && handleDelete(session.id)}
-                        className="flex items-center gap-1 text-red-600 hover:text-red-900 dark:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={!session.id || deleteSession.isPending}
-                        title="Delete"
+                        className="inline-flex items-center gap-1 text-red-500 hover:text-red-700 text-sm font-medium transition-colors disabled:opacity-40"
                         type="button"
                       >
                         <TrashIcon className="w-4 h-4" />
@@ -150,4 +124,3 @@ const MentorSessionsList = () => {
 }
 
 export default MentorSessionsList
-

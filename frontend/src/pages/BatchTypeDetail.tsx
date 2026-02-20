@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useMentorSession, useDeleteMentorSession } from '../hooks/useMentorSessions'
+import { useBatchType, useDeleteBatchType } from '../hooks/useBatchTypes'
 import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { ErrorDisplay } from '../components/ui/ErrorDisplay'
 import { PencilIcon, TrashIcon } from '../components/icons/Icons'
@@ -11,35 +11,35 @@ const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
   </div>
 )
 
-const MentorSessionDetail = () => {
+const BatchTypeDetail = () => {
   const { id } = useParams<{ id: string }>()
-  const sessionId = id ? parseInt(id) : 0
-  const { data: session, isLoading, error } = useMentorSession(sessionId)
-  const deleteSession = useDeleteMentorSession()
+  const batchTypeId = id ? parseInt(id) : 0
+  const { data: batchType, isLoading, error } = useBatchType(batchTypeId)
+  const deleteBatchType = useDeleteBatchType()
   const navigate = useNavigate()
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this mentor session?')) {
+    if (window.confirm('Are you sure you want to delete this batch type?')) {
       try {
-        await deleteSession.mutateAsync(sessionId)
-        navigate('/mentor-sessions')
+        await deleteBatchType.mutateAsync(batchTypeId)
+        navigate('/batch-types')
       } catch (err) {}
     }
   }
 
-  if (isLoading) return <LoadingSpinner text="Loading mentor session..." />
-  if (error || !session) return <ErrorDisplay error={error || new Error('Mentor session not found')} title="Failed to load mentor session" />
+  if (isLoading) return <LoadingSpinner text="Loading batch type..." />
+  if (error || !batchType) return <ErrorDisplay error={error || new Error('Batch type not found')} title="Failed to load batch type" />
 
   return (
     <div className="max-w-2xl">
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Mentor Session</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Session details</p>
+          <h1 className="text-2xl font-bold text-slate-900">{batchType.name}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Batch type details</p>
         </div>
         <div className="flex gap-2">
           <Link
-            to={`/mentor-sessions/${session.id}/edit`}
+            to={`/batch-types/${batchType.id}/edit`}
             className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-colors"
           >
             <PencilIcon className="w-4 h-4" /> Edit
@@ -55,16 +55,12 @@ const MentorSessionDetail = () => {
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
         <dl>
-          <Field label="Session Time" value={session.time ? new Date(session.time).toLocaleString() : null} />
-          <Field label="Duration" value={session.durationMinutes ? `${session.durationMinutes} minutes` : null} />
-          <Field label="Student ID" value={session.studentId} />
-          <Field label="Mentor ID" value={session.mentorId} />
-          {session.studentRating && <Field label="Student Rating" value={`${session.studentRating} / 5`} />}
-          {session.mentorRating && <Field label="Mentor Rating" value={`${session.mentorRating} / 5`} />}
+          <Field label="ID" value={batchType.id} />
+          <Field label="Name" value={batchType.name} />
         </dl>
       </div>
     </div>
   )
 }
 
-export default MentorSessionDetail
+export default BatchTypeDetail

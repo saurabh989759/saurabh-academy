@@ -14,76 +14,70 @@ const MentorsList = () => {
     if (window.confirm('Are you sure you want to delete this mentor?')) {
       try {
         await deleteMentor.mutateAsync(id)
-        // List will automatically refresh due to query invalidation in the hook
       } catch (err) {
-        // Error handled by toast notification
         console.error('Failed to delete mentor:', err)
       }
     }
   }
 
-  if (isLoading) {
-    return <LoadingSpinner text="Loading mentors..." />
-  }
-
-  if (error) {
-    return <ErrorDisplay error={error} title="Failed to load mentors" onRetry={() => refetch()} />
-  }
+  if (isLoading) return <LoadingSpinner text="Loading mentors..." />
+  if (error) return <ErrorDisplay error={error} title="Failed to load mentors" onRetry={() => refetch()} />
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Mentors</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Mentors</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Manage mentor profiles and information</p>
+        </div>
         <Link
           to="/mentors/new"
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors"
+          className="inline-flex items-center gap-2 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors shadow-sm"
         >
-          <PlusIcon className="w-5 h-5" />
-          Create Mentor
+          <PlusIcon className="w-4 h-4" />
+          Add Mentor
         </Link>
       </div>
 
       {mentors && mentors.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {mentors.map((mentor: Mentor) => (
-            <div
-              key={mentor.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700"
-            >
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                {mentor.name}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Company: {mentor.currentCompany || 'Not specified'}
-              </p>
-              <div className="flex space-x-2">
-                <Link
-                  to={`/mentors/${mentor.id}`}
-                  className="flex items-center justify-center gap-1 flex-1 text-center bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors text-sm"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <EyeIcon className="w-4 h-4" />
-                  View
-                </Link>
-                <Link
-                  to={`/mentors/${mentor.id}/edit`}
-                  className="flex items-center justify-center gap-1 flex-1 text-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <PencilIcon className="w-4 h-4" />
-                  Edit
-                </Link>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (mentor.id) handleDelete(mentor.id)
-                  }}
-                  className="flex items-center justify-center gap-1 flex-1 text-center bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!mentor.id || deleteMentor.isPending}
-                >
-                  <TrashIcon className="w-4 h-4" />
-                  {deleteMentor.isPending ? 'Deleting...' : 'Delete'}
-                </button>
+            <div key={mentor.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+              <div className="h-1.5 bg-gradient-to-r from-orange-500 to-amber-600" />
+              <div className="p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <span className="text-lg">🧑‍💼</span>
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">{mentor.name}</h3>
+                    <p className="text-sm text-slate-500">{mentor.currentCompany || 'Not specified'}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-3 border-t border-slate-50">
+                  <Link
+                    to={`/mentors/${mentor.id}`}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 bg-violet-600 text-white px-3 py-2 rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <EyeIcon className="w-4 h-4" /> View
+                  </Link>
+                  <Link
+                    to={`/mentors/${mentor.id}/edit`}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 bg-slate-100 text-slate-700 px-3 py-2 rounded-xl text-sm font-medium hover:bg-slate-200 transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <PencilIcon className="w-4 h-4" /> Edit
+                  </Link>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); if (mentor.id) handleDelete(mentor.id) }}
+                    disabled={!mentor.id || deleteMentor.isPending}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 bg-red-50 text-red-600 px-3 py-2 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors disabled:opacity-40"
+                  >
+                    <TrashIcon className="w-4 h-4" />
+                    {deleteMentor.isPending ? '...' : 'Delete'}
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -91,8 +85,8 @@ const MentorsList = () => {
       ) : (
         <EmptyState
           title="No mentors found"
-          description="Get started by creating your first mentor."
-          actionLabel="Create Mentor"
+          description="Get started by adding your first mentor."
+          actionLabel="Add Mentor"
           onAction={() => (window.location.href = '/mentors/new')}
         />
       )}
@@ -101,4 +95,3 @@ const MentorsList = () => {
 }
 
 export default MentorsList
-

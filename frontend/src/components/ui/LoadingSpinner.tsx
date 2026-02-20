@@ -6,15 +6,14 @@ interface LoadingSpinnerProps {
 export const LoadingSpinner = ({ size = 'md', text }: LoadingSpinnerProps) => {
   const sizeClasses = {
     sm: 'h-6 w-6',
-    md: 'h-12 w-12',
-    lg: 'h-16 w-16',
+    md: 'h-10 w-10',
+    lg: 'h-14 w-14',
   }
 
   return (
-    <div className="flex flex-col items-center justify-center py-12">
-      <div className={`animate-spin rounded-full border-b-2 border-primary-600 ${sizeClasses[size]}`}></div>
-      {text && <p className="mt-4 text-gray-600 dark:text-gray-400">{text}</p>}
+    <div className="flex flex-col items-center justify-center py-16">
+      <div className={`animate-spin rounded-full border-2 border-slate-200 border-t-violet-600 ${sizeClasses[size]}`} />
+      {text && <p className="mt-4 text-sm text-slate-500">{text}</p>}
     </div>
   )
 }
-

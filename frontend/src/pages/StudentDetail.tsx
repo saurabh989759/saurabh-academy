@@ -1,6 +1,15 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useStudent, useDeleteStudent } from '../hooks/useStudents'
 import { PencilIcon, TrashIcon } from '../components/icons/Icons'
+import { LoadingSpinner } from '../components/ui/LoadingSpinner'
+import { ErrorDisplay } from '../components/ui/ErrorDisplay'
+
+const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <div className="py-3.5 border-b border-slate-50 last:border-0">
+    <dt className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">{label}</dt>
+    <dd className="text-sm font-medium text-slate-900">{value || '—'}</dd>
+  </div>
+)
 
 const StudentDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -16,78 +25,40 @@ const StudentDetail = () => {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    )
-  }
-
-  if (error || !student) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md">
-        {error instanceof Error ? error.message : 'Student not found'}
-      </div>
-    )
-  }
+  if (isLoading) return <LoadingSpinner text="Loading student..." />
+  if (error || !student) return <ErrorDisplay error={error || new Error('Student not found')} title="Failed to load student" />
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Student Details</h1>
-        <div className="space-x-2">
+    <div className="max-w-2xl">
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">{student.name}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Student profile</p>
+        </div>
+        <div className="flex gap-2">
           <Link
             to={`/students/${student.id}/edit`}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+            className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-colors"
           >
-            <PencilIcon className="w-4 h-4" />
-            Edit
+            <PencilIcon className="w-4 h-4" /> Edit
           </Link>
           <button
             onClick={handleDelete}
-            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+            className="inline-flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-red-100 transition-colors"
           >
-            <TrashIcon className="w-4 h-4" />
-            Delete
+            <TrashIcon className="w-4 h-4" /> Delete
           </button>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</dt>
-            <dd className="mt-1 text-sm text-gray-900 dark:text-white">{student.name}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
-            <dd className="mt-1 text-sm text-gray-900 dark:text-white">{student.email}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Graduation Year</dt>
-            <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-              {student.graduationYear || '-'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">University</dt>
-            <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-              {student.universityName || '-'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</dt>
-            <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-              {student.phoneNumber || '-'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Batch ID</dt>
-            <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-              {student.batchId || '-'}
-            </dd>
-          </div>
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+        <dl>
+          <Field label="Full Name" value={student.name} />
+          <Field label="Email Address" value={student.email} />
+          <Field label="Graduation Year" value={student.graduationYear} />
+          <Field label="University" value={student.universityName} />
+          <Field label="Phone Number" value={student.phoneNumber} />
+          <Field label="Batch ID" value={student.batchId} />
         </dl>
       </div>
     </div>
@@ -95,4 +66,3 @@ const StudentDetail = () => {
 }
 
 export default StudentDetail
-

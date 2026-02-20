@@ -9,82 +9,56 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Service for publishing WebSocket events to connected clients
- * Publishes realtime updates for student and batch operations
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class WebSocketEventPublisher {
 
+    private static final String STUDENTS_TOPIC = "/topic/students";
+    private static final String BATCHES_TOPIC  = "/topic/batches";
+
     private final SimpMessagingTemplate messagingTemplate;
 
-    /**
-     * Publish student created event
-     */
     public void publishStudentCreated(Long studentId, String email) {
-        Map<String, Object> event = createEvent("STUDENT_CREATED", studentId, Map.of("email", email));
-        messagingTemplate.convertAndSend("/topic/students", event);
-        log.debug("Published STUDENT_CREATED event for student: {}", studentId);
+        broadcast(STUDENTS_TOPIC, buildEvent("STUDENT_CREATED", studentId, Map.of("email", email)));
     }
 
-    /**
-     * Publish student updated event
-     */
     public void publishStudentUpdated(Long studentId, String email) {
-        Map<String, Object> event = createEvent("STUDENT_UPDATED", studentId, Map.of("email", email));
-        messagingTemplate.convertAndSend("/topic/students", event);
-        log.debug("Published STUDENT_UPDATED event for student: {}", studentId);
+        broadcast(STUDENTS_TOPIC, buildEvent("STUDENT_UPDATED", studentId, Map.of("email", email)));
     }
 
-    /**
-     * Publish student deleted event
-     */
     public void publishStudentDeleted(Long studentId) {
-        Map<String, Object> event = createEvent("STUDENT_DELETED", studentId, Map.of());
-        messagingTemplate.convertAndSend("/topic/students", event);
-        log.debug("Published STUDENT_DELETED event for student: {}", studentId);
+        broadcast(STUDENTS_TOPIC, buildEvent("STUDENT_DELETED", studentId, Map.of()));
     }
 
-    /**
-     * Publish batch created event
-     */
     public void publishBatchCreated(Long batchId, String name) {
-        Map<String, Object> event = createEvent("BATCH_CREATED", batchId, Map.of("name", name));
-        messagingTemplate.convertAndSend("/topic/batches", event);
-        log.debug("Published BATCH_CREATED event for batch: {}", batchId);
+        broadcast(BATCHES_TOPIC, buildEvent("BATCH_CREATED", batchId, Map.of("name", name)));
     }
 
-    /**
-     * Publish batch updated event
-     */
     public void publishBatchUpdated(Long batchId, String name) {
-        Map<String, Object> event = createEvent("BATCH_UPDATED", batchId, Map.of("name", name));
-        messagingTemplate.convertAndSend("/topic/batches", event);
-        log.debug("Published BATCH_UPDATED event for batch: {}", batchId);
+        broadcast(BATCHES_TOPIC, buildEvent("BATCH_UPDATED", batchId, Map.of("name", name)));
     }
 
-    /**
-     * Publish batch deleted event
-     */
     public void publishBatchDeleted(Long batchId) {
-        Map<String, Object> event = createEvent("BATCH_DELETED", batchId, Map.of());
-        messagingTemplate.convertAndSend("/topic/batches", event);
-        log.debug("Published BATCH_DELETED event for batch: {}", batchId);
+        broadcast(BATCHES_TOPIC, buildEvent("BATCH_DELETED", batchId, Map.of()));
     }
 
-    private Map<String, Object> createEvent(String type, Long id, Map<String, Object> additionalData) {
+    // -------------------------------------------------------------------------
+
+    private void broadcast(String destination, Map<String, Object> payload) {
+        messagingTemplate.convertAndSend(destination, payload);
+        log.debug("Event broadcast to {}: type={}", destination, payload.get("type"));
+    }
+
+    private Map<String, Object> buildEvent(String type, Long id, Map<String, Object> extra) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", id);
+        payload.putAll(extra);
+
         Map<String, Object> event = new HashMap<>();
         event.put("type", type);
         event.put("timestamp", Instant.now().toString());
-        
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("id", id);
-        payload.putAll(additionalData);
         event.put("payload", payload);
-        
         return event;
     }
 }
-

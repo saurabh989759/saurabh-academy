@@ -1,104 +1,107 @@
-# Quick Start Guide
+# Quick Start
 
-## 🚀 Start Everything with Docker Compose
+## Launch Everything
+
+Run the entire stack — backend, frontend, MySQL, Redis, Kafka, and Zookeeper — with a single command:
 
 ```bash
-# From project root
 docker-compose -f docker-compose.infrastructure.yml up --build
 ```
 
-This will start:
-- ✅ MySQL (port 3306)
-- ✅ Redis (port 6379)
-- ✅ Kafka + Zookeeper (port 9092)
-- ✅ Backend API (port 8080)
-- ✅ Frontend (port 80)
+Once all containers are healthy, the system is available at:
 
-## 📍 Access Points
+| Service | Address |
+|---------|---------|
+| Frontend UI | http://localhost |
+| Backend API | http://localhost:8080 |
+| API via proxy | http://localhost/api |
+| WebSocket | ws://localhost/ws |
 
-- **Frontend**: http://localhost
-- **Backend API**: http://localhost/api
-- **Backend Direct**: http://localhost:8080
-- **WebSocket**: ws://localhost/ws
+---
 
-## 🔍 Check Status
+## Login Credentials
+
+| Field | Value |
+|-------|-------|
+| Email | admin@academy.com |
+| Password | password123 |
+
+---
+
+## Check Container Status
 
 ```bash
-# View all services
+# List all running containers
 docker-compose -f docker-compose.infrastructure.yml ps
 
-# View logs
+# Stream all logs
 docker-compose -f docker-compose.infrastructure.yml logs -f
 
-# View specific service logs
+# Logs for a specific service
 docker-compose -f docker-compose.infrastructure.yml logs frontend
 docker-compose -f docker-compose.infrastructure.yml logs backend
 ```
 
-## 🛠️ Common Issues
+---
 
-### Port 80 Already in Use
-
-```bash
-# Find what's using port 80
-sudo lsof -i :80
-
-# Or change port in docker-compose.infrastructure.yml:
-# Change "80:80" to "8081:80"
-```
-
-### Frontend Build Fails
+## Smoke Tests
 
 ```bash
-# Check frontend logs
-docker-compose -f docker-compose.infrastructure.yml logs frontend
-
-# Rebuild frontend only
-docker-compose -f docker-compose.infrastructure.yml build --no-cache frontend
-```
-
-### Backend Not Starting
-
-```bash
-# Check backend logs
-docker-compose -f docker-compose.infrastructure.yml logs backend
-
-# Check if infrastructure is ready
-docker-compose -f docker-compose.infrastructure.yml ps
-```
-
-## 🧪 Test the Setup
-
-```bash
-# Test backend health
+# Backend health
 curl http://localhost:8080/actuator/health
 
-# Test frontend
+# Frontend
 curl http://localhost/health
 
-# Test API through frontend proxy
+# API through Nginx proxy
 curl http://localhost/api/actuator/health
 ```
 
-## 🔄 Restart Services
+---
+
+## Stop and Restart
 
 ```bash
-# Stop all
+# Bring everything down
 docker-compose -f docker-compose.infrastructure.yml down
 
-# Start again
+# Restart
 docker-compose -f docker-compose.infrastructure.yml up
 ```
 
-## 📝 Login Credentials
+---
 
-- **Email**: admin@academy.com
-- **Password**: password123
+## Common Issues
 
-## 🎯 Next Steps
+**Port 80 is already in use**
+
+```bash
+# Find what's holding port 80
+sudo lsof -i :80
+
+# Or change the host port in docker-compose.infrastructure.yml:
+# "80:80"  →  "8081:80"
+```
+
+**Frontend container fails to build**
+
+```bash
+docker-compose -f docker-compose.infrastructure.yml logs frontend
+docker-compose -f docker-compose.infrastructure.yml build --no-cache frontend
+```
+
+**Backend not starting up**
+
+```bash
+docker-compose -f docker-compose.infrastructure.yml logs backend
+docker-compose -f docker-compose.infrastructure.yml ps
+```
+
+---
+
+## What's Next
 
 1. Open http://localhost in your browser
-2. Login with credentials above
-3. Navigate through Students, Batches, Classes, Mentors, Sessions
-4. All APIs are consumed with realtime updates via WebSocket
-
+2. Sign in with the credentials above
+3. Explore Students, Batches, Classes, Mentors, and Sessions
+4. All data mutations trigger real-time UI updates via WebSocket

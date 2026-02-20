@@ -1,181 +1,194 @@
-# Academy Backend - Project Documentation
+# Academy Management System — Backend Documentation
 
-h1. Abstract
+## Overview
 
-This project implements a comprehensive backend system for managing an academy with students, batches, mentors, classes, and mentor sessions. The system is built using Spring Boot 3.2.0 with Java 21, MySQL 8.0 for data persistence, and Apache Kafka for event-driven messaging. The application follows a layered architecture pattern with RESTful APIs, implements database migrations using Flyway, and includes comprehensive testing using Testcontainers.
+A production-ready backend platform for managing academy operations — students, batches, mentor sessions, classes, and instructors. Built on Spring Boot 3.2.0 with Java 21, the system follows a layered multi-module architecture with MySQL 8.0 for persistence, Apache Kafka for event streaming, and Redis for caching. Schema versioning is handled via Flyway, and the test suite relies on Testcontainers for realistic integration coverage.
 
-h1. Project Description
+---
 
-h2. Objectives
+## Technology Stack
 
-The Academy Backend system aims to provide:
+| Category | Technology |
+|---|---|
+| Core Framework | Java 21, Spring Boot 3.2.0 |
+| Persistence | Spring Data JPA, MySQL 8.0, Flyway, Hibernate |
+| Messaging | Apache Kafka, Zookeeper |
+| Caching | Redis (Spring Cache abstraction) |
+| Mapping | MapStruct, Lombok |
+| API Docs | Springdoc OpenAPI, Swagger UI |
+| Testing | JUnit 5, Mockito, Testcontainers |
+| DevOps | Docker, Docker Compose, GitHub Actions |
+| Monitoring | Spring Boot Actuator |
 
-* Student Management: Registration, enrollment in batches, and tracking of academic progress
-* Batch Management: Creation and management of student batches with associated classes
-* Mentor Management: Tracking mentors and their sessions with students
-* Class Scheduling: Management of classes and their association with batches
-* Event-Driven Architecture: Asynchronous event processing using Kafka for domain events
-* Scalable Architecture: Microservices-ready design with clear separation of concerns
+---
 
-h2. Relevance
+## System Design
 
-This project demonstrates real-world backend development practices including RESTful API design, database schema design, event-driven architecture, containerization, automated testing, CI/CD pipelines, and API documentation.
+### Layered Architecture
 
-h1. Requirement Gathering
+The system is organized into four primary layers:
 
-h2. Functional Requirements
+**Entity Layer** — `BatchType`, `Batch`, `Student`, `ClassEntity`, `Mentor`, `MentorSession`, `StudentBatchHistory`, `AuditEvent`
 
-* Student Registration
-** Register new students with personal and academic information
-** Assign students to batches
-** Track student batch history
-** Support buddy system (pairing students)
+**Service Layer** — `StudentService`, `BatchService`, `MentorService`, `MentorSessionService`, `ClassService`
 
-* Batch Management
-** Create and manage batches
-** Associate batches with batch types (e.g., Full Stack, Data Science)
-** Link classes to batches
-** Track batch start dates and instructors
+**Controller Layer** — One REST controller per domain entity (OpenAPI-generated interfaces)
 
-* Mentor Session Booking
-** Book mentor sessions between students and mentors
-** Track session duration and timings
-** Support bidirectional ratings (student rates mentor, mentor rates student)
+**Kafka Layer** — Domain event producers and audit event consumers
 
-* Class Management
-** Create classes with date, time, and instructor information
-** Associate classes with multiple batches
+![Class Diagram](class-diagram.png)
 
-* Event Publishing
-** Publish student.registered event when a student is registered
-** Publish mentor.session.created event when a session is booked
-** Publish batch.created event when a batch is created
+---
 
-h2. Non-Functional Requirements
+## Requirements
 
-* Performance: API response time < 200ms for read operations
-* Scalability: Horizontal scaling capability with stateless API design
-* Reliability: Database transaction management and error handling
-* Security: Input validation and placeholder for OAuth2/JWT authentication
-* Maintainability: Layered architecture with comprehensive test coverage
+### What the System Does
 
-h1. Class Diagrams
+**Student Management**
+- Register students with personal and academic details
+- Enroll students into batches
+- Maintain historical batch assignment records
+- Buddy pairing between students
 
-The system follows a layered architecture with Entity, Service, Controller, and Kafka layers.
+**Batch Management**
+- Create batches tied to batch types (e.g., Full Stack, Data Science)
+- Link multiple classes to a batch
+- Track start dates and assigned instructors
 
-*Entity Layer* includes: BatchType, Batch, Student, ClassEntity, Mentor, MentorSession, StudentBatchHistory, AuditEvent
+**Mentor Session Booking**
+- Schedule sessions between a student and a mentor
+- Record session duration and timing
+- Collect bidirectional ratings (student → mentor and mentor → student)
 
-*Service Layer* includes: StudentService, BatchService, MentorService, MentorSessionService, ClassService
+**Class Management**
+- Create classes with date, time, and instructor
+- Attach classes to one or more batches
 
-*Controller Layer* includes REST controllers for each entity
+**Kafka Event Publishing**
+- `student.registered` — on student creation
+- `mentor.session.created` — on session booking
+- `batch.created` — on batch creation
 
-*Kafka Layer* includes event producers and consumers
+### Quality Attributes
 
-{image:class-diagram.png|width=800}
+| Attribute | Target |
+|---|---|
+| Performance | Read API response < 200 ms |
+| Scalability | Stateless design; horizontal scaling supported |
+| Reliability | Full transaction management and error handling |
+| Security | Input validation; JWT-based authentication |
+| Maintainability | Layered architecture; comprehensive test coverage |
 
-h1. Database Schema Design
+---
 
-The database consists of 9 main tables with proper relationships and indexes:
+## Database Schema
 
-* batch_type: Stores batch type definitions
-* batches: Stores batch information
-* classes: Stores class/session information
-* batches_classes: Join table for many-to-many relationship
-* students: Stores student information
-* mentors: Stores mentor information
-* mentor_sessions: Stores mentor session bookings
-* student_batch_history: Tracks historical batch assignments
-* audit_events: Stores consumed Kafka events
+Nine tables cover all domain concepts and audit history:
 
-{image:erd.png|width=800}
+| Table | Purpose |
+|---|---|
+| `batch_type` | Batch category definitions |
+| `batches` | Batch records |
+| `classes` | Scheduled class records |
+| `batches_classes` | Many-to-many join between batches and classes |
+| `students` | Student records |
+| `mentors` | Mentor records |
+| `mentor_sessions` | Session bookings |
+| `student_batch_history` | Tracks batch reassignments over time |
+| `audit_events` | Persisted Kafka event log |
 
-h1. Feature Development Process
+![Entity Relationship Diagram](erd.png)
 
-h2. Key Feature: "Book a Mentor Session"
+---
 
-This section details the implementation flow:
+## Feature Walkthrough: Booking a Mentor Session
 
-# API Request: POST /api/mentor-sessions
-# Controller Layer: Validates request and delegates to service
-# Service Layer: Validates entities, creates session, publishes event
-# Repository Layer: Persists to database
-# Kafka Event Publication: Publishes mentor.session.created event
-# Event Consumption: Stores event in audit_events table
+The flow below illustrates how a single API request propagates through every layer of the system.
 
-{code}
-API Request → Controller → Service → Repository → Database
-                                    ↓
-                              Kafka Producer → Kafka Topic
-                                    ↓
-                              Event Consumer → Audit Table
-{code}
+```
+POST /api/mentor-sessions
+        │
+        ▼
+   Controller  ──► validates request, delegates to service
+        │
+        ▼
+    Service    ──► validates student & mentor, creates session
+        │
+        ├──► Repository ──► Database  (persists session)
+        │
+        └──► Kafka Producer ──► mentor.session.created topic
+                                         │
+                                         ▼
+                               Event Consumer ──► audit_events table
+```
 
-h1. Deployment Flow
+Steps in sequence:
+1. **POST** `/api/mentor-sessions` — client submits booking payload
+2. **Controller** validates request body and delegates to `MentorSessionService`
+3. **Service** confirms both student and mentor exist, saves session transactionally
+4. **Repository** persists the entity to MySQL
+5. **Kafka Producer** fires `mentor.session.created` event
+6. **Event Consumer** receives the event and writes it to `audit_events`
 
-h2. Local Development
+---
 
-# Prerequisites: Java 21, Maven, Docker
-# Start Infrastructure: docker-compose -f docker-compose.dev.yml up -d
-# Run Application: mvn spring-boot:run
-# Access: http://localhost:8080
+## Deployment
 
-h2. Docker Deployment
+### Local Development
 
-The application is containerized using multi-stage Docker build. Docker Compose orchestrates MySQL, Zookeeper, Kafka, and the application.
+```bash
+# 1. Start infrastructure
+docker-compose -f docker-compose.infrastructure.yml up -d
 
-h2. Production Deployment
+# 2. Run the application
+./gradlew bootRun
 
-Options include:
-* Docker Compose for small scale
-* Kubernetes for large scale
-* Cloud Services (AWS RDS, MSK, ECS/EKS)
+# 3. Access API
+curl http://localhost:8080/actuator/health
+```
 
-h1. Technologies Used
+### Docker (Full Stack)
 
-* Core Framework: Java 21, Spring Boot 3.2.0, Spring Data JPA, Spring Kafka
-* Database: MySQL 8.0, Flyway, Hibernate
-* Messaging: Apache Kafka, Zookeeper
-* Mapping & Utilities: MapStruct, Lombok
-* API Documentation: Springdoc OpenAPI, Swagger UI
-* Testing: JUnit 5, Mockito, Testcontainers
-* DevOps: Docker, Docker Compose, GitHub Actions
-* Monitoring: Spring Boot Actuator
+The Docker Compose file starts MySQL, Zookeeper, Kafka, Redis, the backend, and the React frontend together using a multi-stage Dockerfile build.
 
-h1. Conclusion
+```bash
+docker-compose -f docker-compose.infrastructure.yml up --build
+```
 
-h2. Key Takeaways
+### Production Options
 
-* Layered Architecture improves maintainability
-* Event-Driven Design enables scalable systems
-* Database Migrations ensure consistency
-* Containerization simplifies deployment
-* Testing Strategy ensures code quality
+- **Docker Compose** — suitable for smaller deployments
+- **Kubernetes** — recommended for scale; use StatefulSets for MySQL/Kafka, Deployments for the app
+- **Cloud Managed Services** — AWS RDS + MSK + ElastiCache + ECS/EKS
 
-h2. Limitations
+---
 
-* Security: Authentication/authorization is placeholder
-* Caching: No caching layer implemented
-* Search: No full-text search capability
-* File Storage: No file upload functionality
+## Key Takeaways
 
-h2. Further Work
+- **Layered architecture** keeps concerns cleanly separated and improves testability
+- **Event-driven design** with Kafka allows async processing and audit trail maintenance
+- **Flyway migrations** version the schema alongside the application code
+- **Containerization** ensures consistent environments from development to production
+- **Testcontainers** enables integration tests that run against real databases and brokers
 
-* Implement OAuth2/JWT authentication
-* Add Redis caching
-* Implement full-text search
-* Add file upload functionality
-* Set up monitoring and observability
+---
 
-h1. References
+## Known Constraints
 
-* Spring Boot Documentation
-* Apache Kafka Documentation
-* MySQL Documentation
-* Flyway Documentation
-* MapStruct Documentation
-* Testcontainers Documentation
-* Docker Documentation
-* OpenAPI Specification
+- JWT authentication is implemented but OAuth2/RBAC are not yet in place
+- No Redis cluster — single node only
+- No full-text search capability
+- No file upload support
 
-*Note: Replace with actual URLs if used in production documentation.*
+---
 
+## References
+
+- Spring Boot — https://spring.io/projects/spring-boot
+- Apache Kafka — https://kafka.apache.org/documentation/
+- MySQL — https://dev.mysql.com/doc/
+- Flyway — https://flywaydb.org/documentation/
+- MapStruct — https://mapstruct.org/documentation/
+- Testcontainers — https://www.testcontainers.org/
+- Docker — https://docs.docker.com/
+- OpenAPI Specification — https://swagger.io/specification/

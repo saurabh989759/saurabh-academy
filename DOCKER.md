@@ -1,283 +1,297 @@
-# Docker Setup Guide
+# Docker Reference Guide
 
-This guide explains how to build and run the Academy Backend application using Docker.
+Everything you need to build, run, and manage the Academy backend with Docker.
 
-## Prerequisites
+---
 
-- Docker Desktop (or Docker Engine + Docker Compose)
-- At least 4GB of available RAM
-- Ports 8080, 3306, 9092, 2181 available
+## System Requirements
 
-## Quick Start
+- Docker Desktop or Docker Engine + Docker Compose
+- At least 4 GB of free RAM
+- Free ports: 8080, 3306, 9092, 2181
 
-### 1. Build and Start All Services
+---
+
+## Starting the Stack
+
+### Build and Launch All Services
 
 ```bash
 docker-compose up --build
 ```
 
-This will:
-- Build the Academy Backend application
-- Start MySQL database
-- Start Kafka and Zookeeper
-- Start the backend application
+Brings up:
+- Academy Backend API
+- MySQL database
+- Apache Kafka + Zookeeper
 
-### 2. Check Service Status
-
-```bash
-docker-compose ps
-```
-
-### 3. View Logs
-
-```bash
-# All services
-docker-compose logs -f
-
-# Specific service
-docker-compose logs -f academy-backend
-docker-compose logs -f mysql
-docker-compose logs -f kafka
-```
-
-### 4. Stop All Services
-
-```bash
-docker-compose down
-```
-
-### 5. Stop and Remove Volumes (Clean Slate)
-
-```bash
-docker-compose down -v
-```
-
-## Services
-
-### Academy Backend
-- **Port**: 8080
-- **Health Check**: http://localhost:8080/actuator/health
-- **API Docs**: http://localhost:8080/swagger-ui.html
-- **API Docs JSON**: http://localhost:8080/api-docs
-
-### MySQL Database
-- **Port**: 3306
-- **Database**: academy_db
-- **Username**: root
-- **Password**: rootpassword
-- **Data Persistence**: Stored in Docker volume `mysql-data`
-
-### Kafka
-- **Port**: 9092
-- **Topics**: Auto-created on first use
-  - `student.registered`
-  - `batch.created`
-  - `mentor.session.created`
-
-### Zookeeper
-- **Port**: 2181
-- **Purpose**: Required by Kafka for coordination
-
-## Building the Application
-
-### Build Only (No Run)
-
-```bash
-docker-compose build
-```
-
-### Build Without Cache
-
-```bash
-docker-compose build --no-cache
-```
-
-## Running in Detached Mode
+### Start in the Background
 
 ```bash
 docker-compose up -d --build
 ```
 
-## Accessing Services
+### Check What's Running
 
-### Application API
+```bash
+docker-compose ps
+```
+
+### Shut Down
+
+```bash
+# Stop containers (keep volumes)
+docker-compose down
+
+# Stop and remove all data volumes
+docker-compose down -v
+```
+
+---
+
+## Service Inventory
+
+### Academy Backend
+| Property | Value |
+|----------|-------|
+| Port | 8080 |
+| Health | http://localhost:8080/actuator/health |
+| Swagger | http://localhost:8080/swagger-ui.html |
+| OpenAPI | http://localhost:8080/api-docs |
+
+### MySQL Database
+| Property | Value |
+|----------|-------|
+| Port | 3306 |
+| Database | academy_db |
+| Username | root |
+| Password | rootpassword |
+| Data | Stored in `mysql-data` Docker volume |
+
+### Apache Kafka
+| Property | Value |
+|----------|-------|
+| Port | 9092 |
+| Topics | `student.registered`, `batch.created`, `mentor.session.created` |
+
+### Zookeeper
+| Property | Value |
+|----------|-------|
+| Port | 2181 |
+| Purpose | Kafka coordination |
+
+---
+
+## Logs
+
+```bash
+# All services at once
+docker-compose logs -f
+
+# One service at a time
+docker-compose logs -f academy-backend
+docker-compose logs -f mysql
+docker-compose logs -f kafka
+```
+
+---
+
+## Build Operations
+
+```bash
+# Build images without starting
+docker-compose build
+
+# Force a clean build (no layer cache)
+docker-compose build --no-cache
+
+# Rebuild and restart a single service
+docker-compose up --build academy-backend
+```
+
+---
+
+## Connecting to Services
+
+### Backend API
+
 ```bash
 curl http://localhost:8080/actuator/health
 ```
 
-### MySQL Database
+### MySQL
+
 ```bash
 docker exec -it academy-mysql mysql -uroot -prootpassword academy_db
 ```
 
 ### Kafka Topics
-```bash
-# List topics
-docker exec -it academy-kafka kafka-topics --bootstrap-server localhost:9092 --list
 
-# Describe topic
-docker exec -it academy-kafka kafka-topics --bootstrap-server localhost:9092 --describe --topic student.registered
+```bash
+# List all topics
+docker exec -it academy-kafka kafka-topics \
+  --bootstrap-server localhost:9092 --list
+
+# Inspect a specific topic
+docker exec -it academy-kafka kafka-topics \
+  --bootstrap-server localhost:9092 \
+  --describe --topic student.registered
 ```
 
-## Troubleshooting
+---
 
-### Application Won't Start
-
-1. **Check if MySQL is ready:**
-   ```bash
-   docker-compose logs mysql
-   ```
-
-2. **Check if Kafka is ready:**
-   ```bash
-   docker-compose logs kafka
-   ```
-
-3. **Check application logs:**
-   ```bash
-   docker-compose logs academy-backend
-   ```
-
-### Database Connection Issues
-
-1. **Verify MySQL is healthy:**
-   ```bash
-   docker-compose ps mysql
-   ```
-
-2. **Check MySQL logs:**
-   ```bash
-   docker-compose logs mysql
-   ```
-
-3. **Restart MySQL:**
-   ```bash
-   docker-compose restart mysql
-   ```
-
-### Kafka Connection Issues
-
-1. **Verify Kafka is healthy:**
-   ```bash
-   docker-compose ps kafka
-   ```
-
-2. **Check Kafka logs:**
-   ```bash
-   docker-compose logs kafka
-   ```
-
-3. **Restart Kafka:**
-   ```bash
-   docker-compose restart kafka
-   ```
-
-### Port Already in Use
-
-If ports are already in use, you can:
-
-1. **Stop conflicting services** using those ports
-2. **Modify ports** in `docker-compose.yml`:
-   ```yaml
-   ports:
-     - "8081:8080"  # Change host port
-   ```
-
-### Clean Rebuild
-
-If you encounter issues, try a clean rebuild:
+## Container Shell Access
 
 ```bash
-# Stop and remove everything
-docker-compose down -v
-
-# Remove old images
-docker rmi academy-backend_academy-backend
-
-# Rebuild from scratch
-docker-compose up --build
-```
-
-## Development Workflow
-
-### Rebuild After Code Changes
-
-```bash
-# Rebuild and restart
-docker-compose up --build academy-backend
-
-# Or restart only
-docker-compose restart academy-backend
-```
-
-### View Real-time Logs
-
-```bash
-docker-compose logs -f academy-backend
-```
-
-### Execute Commands in Container
-
-```bash
-# Access shell
+# Open a shell inside the backend container
 docker exec -it academy-backend sh
 
-# Run specific command
+# Run a quick command
 docker exec -it academy-backend java -version
 ```
 
+---
+
 ## Environment Variables
 
-You can override environment variables by creating a `.env` file:
+Override defaults by creating a `.env` file in the project root:
 
 ```env
 SPRING_DATASOURCE_PASSWORD=yourpassword
 SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
 ```
 
-Or modify `docker-compose.yml` directly.
+Alternatively, edit the `environment:` section of `docker-compose.yml` directly.
+
+---
 
 ## Health Checks
 
-All services have health checks configured:
+All services declare health checks in Docker Compose:
 
-- **MySQL**: Checks if database is accepting connections
-- **Kafka**: Checks if broker is responding
-- **Backend**: Checks actuator health endpoint
+| Service | Check |
+|---------|-------|
+| MySQL | Accepts connections |
+| Kafka | Broker responds |
+| Backend | `/actuator/health` returns `UP` |
+
+---
 
 ## Data Persistence
 
-- **MySQL data**: Persisted in Docker volume `mysql-data`
-- **Kafka data**: Stored in container (ephemeral by default)
+- **MySQL data** → persisted in Docker volume `mysql-data`
+- **Kafka data** → stored in the container (ephemeral by default)
 
-To persist Kafka data, add volumes to the kafka service in `docker-compose.yml`.
+To persist Kafka data across restarts, add a named volume to the kafka service definition in `docker-compose.yml`.
+
+---
+
+## Troubleshooting
+
+### Application Fails to Start
+
+**Step 1 — Check MySQL readiness:**
+```bash
+docker-compose logs mysql
+docker-compose ps mysql
+```
+
+**Step 2 — Check Kafka readiness:**
+```bash
+docker-compose logs kafka
+docker-compose ps kafka
+```
+
+**Step 3 — Check application logs:**
+```bash
+docker-compose logs academy-backend
+```
+
+### Database Won't Connect
+
+```bash
+# Verify MySQL is healthy
+docker-compose ps mysql
+
+# Restart MySQL
+docker-compose restart mysql
+```
+
+### Kafka Issues
+
+```bash
+# Verify Kafka is healthy
+docker-compose ps kafka
+
+# Restart Kafka
+docker-compose restart kafka
+```
+
+### Port Already in Use
+
+Edit `docker-compose.yml` to remap the host port:
+
+```yaml
+ports:
+  - "8081:8080"   # maps host port 8081 → container port 8080
+```
+
+### Full Clean Rebuild
+
+When in doubt, wipe everything and start fresh:
+
+```bash
+docker-compose down -v
+docker rmi academy-backend_academy-backend
+docker-compose up --build
+```
+
+---
 
 ## Performance Tuning
 
-For better performance, you can:
+**Increase container memory:**
 
-1. **Increase memory limits** in `docker-compose.yml`:
-   ```yaml
-   deploy:
-     resources:
-       limits:
-         memory: 2G
-   ```
+```yaml
+deploy:
+  resources:
+    limits:
+      memory: 2G
+```
 
-2. **Adjust JVM options** in Dockerfile:
-   ```dockerfile
-   ENTRYPOINT ["java", "-Xmx1g", "-Xms512m", "-jar", "app.jar"]
-   ```
+**Tune JVM heap in Dockerfile:**
 
-## Production Considerations
+```dockerfile
+ENTRYPOINT ["java", "-Xmx1g", "-Xms512m", "-jar", "app.jar"]
+```
 
-For production deployment:
+---
 
-1. Use environment-specific configuration files
-2. Set up proper secrets management
-3. Configure SSL/TLS for database connections
-4. Use external Kafka cluster
-5. Set up proper monitoring and logging
-6. Configure resource limits
-7. Use Docker secrets for passwords
+## Development Workflow
 
+After changing backend code:
+
+```bash
+# Rebuild and restart only the backend
+docker-compose up --build academy-backend
+
+# Or just restart (if no code changes, image already built)
+docker-compose restart academy-backend
+
+# Watch live output
+docker-compose logs -f academy-backend
+```
+
+---
+
+## Production Checklist
+
+Before going to production:
+
+1. Use environment-specific config files or secrets management (e.g., Vault)
+2. Enable SSL/TLS for all service connections
+3. Switch to an external Kafka cluster
+4. Configure resource limits on all containers
+5. Replace plaintext passwords with Docker secrets
+6. Set up proper log aggregation (ELK, Datadog, etc.)
+7. Add monitoring and alerting

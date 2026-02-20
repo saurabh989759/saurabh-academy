@@ -17,94 +17,80 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
-/**
- * JWT Authentication Filter
- * Intercepts requests and validates JWT tokens
- */
 @Component
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    
+
     private final JwtService jwtService;
-    
+
     @Value("${jwt.header.name:Authorization}")
-    private String authorizationHeader;
-    
+    private String headerName;
+
     @Value("${jwt.header.prefix:Bearer }")
-    private String bearerPrefix;
-    
+    private String tokenPrefix;
+
     public JwtAuthenticationFilter(JwtService jwtService) {
         this.jwtService = jwtService;
     }
-    
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain) throws ServletException, IOException {
-        
-        // Skip JWT filter for auth endpoints
-        String path = request.getRequestURI();
-        if (path != null && path.startsWith("/api/auth/")) {
-            filterChain.doFilter(request, response);
+            @NonNull FilterChain chain) throws ServletException, IOException {
+
+        if (isAuthEndpoint(request)) {
+            chain.doFilter(request, response);
             return;
         }
-        
-        final String authHeader = request.getHeader(authorizationHeader);
-        
-        if (authHeader == null || !authHeader.startsWith(bearerPrefix)) {
-            filterChain.doFilter(request, response);
+
+        String header = request.getHeader(headerName);
+        if (header == null || !header.startsWith(tokenPrefix)) {
+            chain.doFilter(request, response);
             return;
         }
-        
+
         try {
-            final String jwt = authHeader.substring(bearerPrefix.length());
-            final String username = jwtService.extractUsername(jwt);
-            
+            String token = header.substring(tokenPrefix.length());
+            String username = jwtService.extractUsername(token);
+
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                if (jwtService.validateToken(jwt)) {
-                    // Extract roles from token
-                    List<SimpleGrantedAuthority> authorities = extractAuthorities(jwt);
-                    
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        username,
-                        null,
-                        authorities
+                if (jwtService.validateToken(token)) {
+                    var authToken = new UsernamePasswordAuthenticationToken(
+                        username, null, resolveAuthorities(token)
                     );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    
-                    log.debug("JWT authentication successful for user: {}", username);
+                    log.debug("Authenticated request for user: {}", username);
                 } else {
-                    log.warn("Invalid JWT token");
+                    log.warn("Rejected token for user: {}", username);
                 }
             }
-        } catch (Exception e) {
-            log.error("JWT authentication error: {}", e.getMessage());
+        } catch (Exception ex) {
+            log.error("Token processing error: {}", ex.getMessage());
         }
-        
-        filterChain.doFilter(request, response);
+
+        chain.doFilter(request, response);
     }
-    
-    /**
-     * Extract authorities from JWT token
-     */
-    private List<SimpleGrantedAuthority> extractAuthorities(String token) {
+
+    private boolean isAuthEndpoint(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return uri != null && uri.startsWith("/api/auth/");
+    }
+
+    private List<SimpleGrantedAuthority> resolveAuthorities(String token) {
         try {
             String roles = jwtService.extractClaim(token, claims -> {
-                Object rolesObj = claims.get("roles");
-                return rolesObj != null ? rolesObj.toString() : "ROLE_USER";
+                Object r = claims.get("roles");
+                return r != null ? r.toString() : "ROLE_USER";
             });
-            
             return Arrays.stream(roles.split(","))
-                .map(role -> new SimpleGrantedAuthority(role.startsWith("ROLE_") ? role : "ROLE_" + role))
-                .collect(Collectors.toList());
-        } catch (Exception e) {
-            log.warn("Failed to extract authorities from token: {}", e.getMessage());
+                .map(r -> new SimpleGrantedAuthority(r.startsWith("ROLE_") ? r : "ROLE_" + r))
+                .toList();
+        } catch (Exception ex) {
+            log.warn("Could not resolve authorities from token: {}", ex.getMessage());
             return List.of(new SimpleGrantedAuthority("ROLE_USER"));
         }
     }
 }
-

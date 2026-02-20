@@ -14,95 +14,64 @@ const ClassesList = () => {
     if (window.confirm('Are you sure you want to delete this class?')) {
       try {
         await deleteClass.mutateAsync(id)
-        // List will automatically refresh due to query invalidation in the hook
       } catch (err) {
-        // Error handled by toast notification
         console.error('Failed to delete class:', err)
       }
     }
   }
 
-  if (isLoading) {
-    return <LoadingSpinner text="Loading classes..." />
-  }
-
-  if (error) {
-    return <ErrorDisplay error={error} title="Failed to load classes" onRetry={() => refetch()} />
-  }
+  if (isLoading) return <LoadingSpinner text="Loading classes..." />
+  if (error) return <ErrorDisplay error={error} title="Failed to load classes" onRetry={() => refetch()} />
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Classes</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Classes</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Manage class schedules and instructors</p>
+        </div>
         <Link
           to="/classes/new"
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors"
+          className="inline-flex items-center gap-2 bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors shadow-sm"
         >
-          <PlusIcon className="w-5 h-5" />
-          Create Class
+          <PlusIcon className="w-4 h-4" />
+          Add Class
         </Link>
       </div>
 
       {classes && classes.length > 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Time
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Instructor
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Actions
-                </th>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-slate-100">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">Name</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">Date</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">Time</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">Instructor</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-slate-50">
               {classes.map((classItem: Class) => (
-                <tr key={classItem.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                    {classItem.name}
+                <tr key={classItem.id} className="hover:bg-violet-50/40 transition-colors">
+                  <td className="px-6 py-4 text-sm font-semibold text-slate-900">{classItem.name}</td>
+                  <td className="px-6 py-4 text-sm text-slate-500">
+                    {classItem.date ? new Date(classItem.date).toLocaleDateString() : '—'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {classItem.date ? new Date(classItem.date).toLocaleDateString() : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {classItem.time || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {classItem.instructor || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-3">
-                      <Link
-                        to={`/classes/${classItem.id}`}
-                        className="flex items-center gap-1 text-primary-600 hover:text-primary-900 dark:text-primary-400 transition-colors"
-                        title="View"
-                      >
-                        <EyeIcon className="w-4 h-4" />
-                        View
+                  <td className="px-6 py-4 text-sm text-slate-500">{classItem.time || '—'}</td>
+                  <td className="px-6 py-4 text-sm text-slate-500">{classItem.instructor || '—'}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-4">
+                      <Link to={`/classes/${classItem.id}`} className="inline-flex items-center gap-1 text-violet-600 hover:text-violet-800 text-sm font-medium transition-colors">
+                        <EyeIcon className="w-4 h-4" /> View
                       </Link>
-                      <Link
-                        to={`/classes/${classItem.id}/edit`}
-                        className="flex items-center gap-1 text-blue-600 hover:text-blue-900 dark:text-blue-400 transition-colors"
-                        title="Edit"
-                      >
-                        <PencilIcon className="w-4 h-4" />
-                        Edit
+                      <Link to={`/classes/${classItem.id}/edit`} className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors">
+                        <PencilIcon className="w-4 h-4" /> Edit
                       </Link>
                       <button
                         onClick={() => classItem.id && handleDelete(classItem.id)}
-                        className="flex items-center gap-1 text-red-600 hover:text-red-900 dark:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={!classItem.id || deleteClass.isPending}
-                        title="Delete"
+                        className="inline-flex items-center gap-1 text-red-500 hover:text-red-700 text-sm font-medium transition-colors disabled:opacity-40"
                       >
                         <TrashIcon className="w-4 h-4" />
                         {deleteClass.isPending ? 'Deleting...' : 'Delete'}
@@ -118,7 +87,7 @@ const ClassesList = () => {
         <EmptyState
           title="No classes found"
           description="Get started by creating your first class."
-          actionLabel="Create Class"
+          actionLabel="Add Class"
           onAction={() => (window.location.href = '/classes/new')}
         />
       )}
@@ -127,4 +96,3 @@ const ClassesList = () => {
 }
 
 export default ClassesList
-

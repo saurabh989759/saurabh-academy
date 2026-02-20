@@ -8,125 +8,91 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.annotation.Order;
 import org.springframework.expression.EvaluationContext;
-import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
-/**
- * AOP Aspect for @WithLock annotation
- * Automatically handles lock acquisition and release
- */
 @Aspect
 @Component
 @RequiredArgsConstructor
 @Slf4j
-@Order(1) // Execute before transaction aspects
+@Order(1)
 public class LockAspect {
-    
+
     private final DistributedLockService lockService;
-    private final ExpressionParser parser = new SpelExpressionParser();
-    
+    private final ExpressionParser spelParser = new SpelExpressionParser();
+
     @Around("@annotation(withLock)")
-    public Object executeWithLock(ProceedingJoinPoint joinPoint, WithLock withLock) throws Throwable {
-        // Resolve lock key using SpEL
-        String lockKey = resolveLockKey(joinPoint, withLock.key());
-        
-        // Convert timeout values from TimeUnit to Duration
-        long timeoutSeconds = withLock.timeUnit().toSeconds(withLock.timeout());
-        long waitTimeoutSeconds = withLock.timeUnit().toSeconds(withLock.waitTimeout());
-        Duration timeout = Duration.ofSeconds(timeoutSeconds);
-        Duration waitTimeout = Duration.ofSeconds(waitTimeoutSeconds);
-        
-        log.debug("Attempting to acquire lock: {} for method: {}", lockKey, joinPoint.getSignature().getName());
-        
-        // Acquire lock with retry using Redisson
-        DistributedLockService.LockHandle lockHandle = lockService.acquireLockWithRetry(
-            lockKey, 
-            timeout, 
-            withLock.maxRetries(), 
-            waitTimeout
+    public Object executeWithLock(ProceedingJoinPoint pjp, WithLock withLock) throws Throwable {
+        String resolvedKey = evaluateLockKey(pjp, withLock.key());
+
+        Duration holdTimeout = Duration.ofSeconds(withLock.timeUnit().toSeconds(withLock.timeout()));
+        Duration acquireTimeout = Duration.ofSeconds(withLock.timeUnit().toSeconds(withLock.waitTimeout()));
+
+        log.debug("Acquiring lock '{}' for {}", resolvedKey, pjp.getSignature().getName());
+
+        DistributedLockService.LockHandle handle = lockService.acquireLockWithRetry(
+            resolvedKey, holdTimeout, withLock.maxRetries(), acquireTimeout
         );
-        
-        if (lockHandle == null) {
-            String errorMsg = withLock.errorMessage();
-            log.warn("Failed to acquire lock: {} for method: {}", lockKey, joinPoint.getSignature().getName());
-            
+
+        if (handle == null) {
+            log.warn("Could not acquire lock '{}' for {}", resolvedKey, pjp.getSignature().getName());
             if (withLock.throwOnFailure()) {
-                throw new LockAcquisitionException(errorMsg);
-            } else {
-                log.info("Lock acquisition failed but throwOnFailure=false, skipping method execution");
-                return null; // Skip method execution
+                throw new LockAcquisitionException(withLock.errorMessage());
             }
+            log.info("Skipping execution of {} — lock unavailable and throwOnFailure=false", pjp.getSignature().getName());
+            return null;
         }
-        
+
         try {
-            log.debug("Lock acquired: {} for method: {}", lockKey, joinPoint.getSignature().getName());
-            // Execute the method
-            return joinPoint.proceed();
+            log.debug("Lock '{}' acquired, proceeding", resolvedKey);
+            return pjp.proceed();
         } finally {
-            // Always release the lock
-            boolean released = lockService.releaseLock(lockHandle);
-            if (released) {
-                log.debug("Lock released: {} for method: {}", lockKey, joinPoint.getSignature().getName());
+            boolean freed = lockService.releaseLock(handle);
+            if (freed) {
+                log.debug("Lock '{}' released", resolvedKey);
             } else {
-                log.warn("Failed to release lock: {} for method: {}", lockKey, joinPoint.getSignature().getName());
+                log.warn("Lock '{}' could not be released", resolvedKey);
             }
         }
     }
-    
-    /**
-     * Resolve lock key using SpEL expression
-     */
-    private String resolveLockKey(ProceedingJoinPoint joinPoint, String keyExpression) {
+
+    // -------------------------------------------------------------------------
+
+    private String evaluateLockKey(ProceedingJoinPoint pjp, String keyExpression) {
         try {
-            // Create evaluation context with method parameters
-            EvaluationContext context = new StandardEvaluationContext();
-            
-            // Add method parameters to context
-            String[] paramNames = getParameterNames(joinPoint);
-            Object[] args = joinPoint.getArgs();
-            
+            EvaluationContext ctx = new StandardEvaluationContext();
+            String[] paramNames = extractParamNames(pjp);
+            Object[] args = pjp.getArgs();
+
             for (int i = 0; i < args.length; i++) {
                 if (paramNames != null && i < paramNames.length) {
-                    context.setVariable(paramNames[i], args[i]);
+                    ctx.setVariable(paramNames[i], args[i]);
                 }
-                // Also set by index for convenience
-                context.setVariable("arg" + i, args[i]);
+                ctx.setVariable("arg" + i, args[i]);
             }
-            
-            // Parse and evaluate expression
-            Expression expression = parser.parseExpression(keyExpression);
-            Object result = expression.getValue(context);
-            
-            return result != null ? result.toString() : keyExpression;
-            
-        } catch (Exception e) {
-            log.warn("Failed to resolve lock key expression: {}, using as-is. Error: {}", keyExpression, e.getMessage());
-            return keyExpression; // Fallback to literal string
+
+            Object value = spelParser.parseExpression(keyExpression).getValue(ctx);
+            return value != null ? value.toString() : keyExpression;
+
+        } catch (Exception ex) {
+            log.warn("SpEL evaluation failed for key '{}': {} — using literal", keyExpression, ex.getMessage());
+            return keyExpression;
         }
     }
-    
-    /**
-     * Get parameter names from join point
-     * Note: Requires -parameters compiler flag (already configured in build.gradle)
-     */
-    private String[] getParameterNames(ProceedingJoinPoint joinPoint) {
+
+    private String[] extractParamNames(ProceedingJoinPoint pjp) {
         try {
-            // Try to get parameter names from method signature
-            org.aspectj.lang.reflect.MethodSignature signature = 
-                (org.aspectj.lang.reflect.MethodSignature) joinPoint.getSignature();
-            return signature.getParameterNames();
-        } catch (Exception e) {
-            log.debug("Could not extract parameter names: {}", e.getMessage());
+            return ((MethodSignature) pjp.getSignature()).getParameterNames();
+        } catch (Exception ex) {
+            log.debug("Could not extract parameter names: {}", ex.getMessage());
             return null;
         }
     }
 }
-

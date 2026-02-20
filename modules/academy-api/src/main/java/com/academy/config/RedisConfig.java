@@ -72,9 +72,9 @@ public class RedisConfig {
         objectMapper.activateDefaultTyping(
             LaissezFaireSubTypeValidator.instance,
             ObjectMapper.DefaultTyping.NON_FINAL,
-            JsonTypeInfo.As.PROPERTY
+            JsonTypeInfo.As.WRAPPER_ARRAY
         );
-        
+
         GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
         template.setValueSerializer(jsonSerializer);
         template.setHashValueSerializer(jsonSerializer);
@@ -97,7 +97,7 @@ public class RedisConfig {
         objectMapper.activateDefaultTyping(
             LaissezFaireSubTypeValidator.instance,
             ObjectMapper.DefaultTyping.NON_FINAL,
-            JsonTypeInfo.As.PROPERTY
+            JsonTypeInfo.As.WRAPPER_ARRAY
         );
         
         GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);

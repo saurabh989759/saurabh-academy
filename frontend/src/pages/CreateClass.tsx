@@ -3,97 +3,60 @@ import { useNavigate } from 'react-router-dom'
 import { useCreateClass } from '../hooks/useClasses'
 import { ClassInput } from '../api/classes'
 
+const inputClass = "w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all placeholder:text-slate-400"
+const labelClass = "block text-sm font-semibold text-slate-700 mb-1.5"
+
 const CreateClass = () => {
   const navigate = useNavigate()
   const createClass = useCreateClass()
-  const [formData, setFormData] = useState<ClassInput>({
-    name: '',
-    date: '',
-    time: '',
-    instructor: '',
-  })
+  const [formData, setFormData] = useState<ClassInput>({ name: '', date: '', time: '', instructor: '' })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
       const result = await createClass.mutateAsync(formData)
       navigate(`/classes/${result.id}`)
-    } catch (error) {
-      // Error handling is done in the mutation
-    }
+    } catch (error) {}
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Create Class</h1>
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-4">
+    <div className="max-w-2xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Add Class</h1>
+        <p className="text-sm text-slate-500 mt-0.5">Fill in the details to create a new class</p>
+      </div>
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 space-y-5">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Name *
-          </label>
-          <input
-            id="name"
-            type="text"
-            required
-            value={formData.name}
+          <label htmlFor="name" className={labelClass}>Name <span className="text-red-500">*</span></label>
+          <input id="name" type="text" required value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            placeholder="Introduction to Java"
-          />
+            className={inputClass} placeholder="Introduction to Java" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="date" className={labelClass}>Date <span className="text-red-500">*</span></label>
+            <input id="date" type="date" required value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })} className={inputClass} />
+          </div>
+          <div>
+            <label htmlFor="time" className={labelClass}>Time <span className="text-red-500">*</span></label>
+            <input id="time" type="time" required value={formData.time}
+              onChange={(e) => setFormData({ ...formData, time: e.target.value })} className={inputClass} />
+          </div>
         </div>
         <div>
-          <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Date *
-          </label>
-          <input
-            id="date"
-            type="date"
-            required
-            value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
-        </div>
-        <div>
-          <label htmlFor="time" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Time *
-          </label>
-          <input
-            id="time"
-            type="time"
-            required
-            value={formData.time}
-            onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
-        </div>
-        <div>
-          <label htmlFor="instructor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Instructor *
-          </label>
-          <input
-            id="instructor"
-            type="text"
-            required
-            value={formData.instructor}
+          <label htmlFor="instructor" className={labelClass}>Instructor <span className="text-red-500">*</span></label>
+          <input id="instructor" type="text" required value={formData.instructor}
             onChange={(e) => setFormData({ ...formData, instructor: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            placeholder="Jane Smith"
-          />
+            className={inputClass} placeholder="Jane Smith" />
         </div>
-        <div className="flex space-x-4 pt-4">
-          <button
-            type="submit"
-            disabled={createClass.isPending}
-            className="flex-1 bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50"
-          >
+        <div className="flex gap-3 pt-2">
+          <button type="submit" disabled={createClass.isPending}
+            className="flex-1 bg-violet-600 text-white py-2.5 px-4 rounded-xl font-semibold hover:bg-violet-700 transition-colors disabled:opacity-50">
             {createClass.isPending ? 'Creating...' : 'Create Class'}
           </button>
-          <button
-            type="button"
-            onClick={() => navigate('/classes')}
-            className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-white"
-          >
+          <button type="button" onClick={() => navigate('/classes')}
+            className="flex-1 bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl font-semibold hover:bg-slate-200 transition-colors">
             Cancel
           </button>
         </div>
@@ -103,4 +66,3 @@ const CreateClass = () => {
 }
 
 export default CreateClass
-

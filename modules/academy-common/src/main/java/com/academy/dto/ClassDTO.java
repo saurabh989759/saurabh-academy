@@ -2,32 +2,29 @@ package com.academy.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-/**
- * DTO for ClassEntity
- */
-@Data
+@Getter
+@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ClassDTO {
-    private Long id;
-    
-    @NotBlank(message = "Name is required")
-    private String name;
-    
-    @NotNull(message = "Date is required")
-    private LocalDate date;
-    
-    @NotNull(message = "Time is required")
-    private LocalTime time;
-    
-    @NotBlank(message = "Instructor is required")
-    private String instructor;
-}
 
+    private Long id;
+
+    @NotBlank(message = "Class name must not be blank")
+    private String name;
+
+    @NotBlank(message = "Instructor name is required")
+    private String instructor;
+
+    @NotNull(message = "Class date must be provided")
+    private LocalDate date;
+
+    @NotNull(message = "Class time must be provided")
+    private LocalTime time;
+}

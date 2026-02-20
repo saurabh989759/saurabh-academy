@@ -4,6 +4,13 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { ErrorDisplay } from '../components/ui/ErrorDisplay'
 import { PencilIcon, TrashIcon } from '../components/icons/Icons'
 
+const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <div className="py-3.5 border-b border-slate-50 last:border-0">
+    <dt className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">{label}</dt>
+    <dd className="text-sm font-medium text-slate-900">{value || '—'}</dd>
+  </div>
+)
+
 const ClassDetail = () => {
   const { id } = useParams<{ id: string }>()
   const classId = id ? parseInt(id) : 0
@@ -16,62 +23,42 @@ const ClassDetail = () => {
       try {
         await deleteClass.mutateAsync(classId)
         navigate('/classes')
-      } catch (err) {
-        // Error handled by toast notification
-      }
+      } catch (err) {}
     }
   }
 
-  if (isLoading) {
-    return <LoadingSpinner text="Loading class..." />
-  }
-
-  if (error || !classItem) {
-    return <ErrorDisplay error={error || new Error('Class not found')} title="Failed to load class" />
-  }
+  if (isLoading) return <LoadingSpinner text="Loading class..." />
+  if (error || !classItem) return <ErrorDisplay error={error || new Error('Class not found')} title="Failed to load class" />
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Class Details</h1>
-        <div className="space-x-2">
+    <div className="max-w-2xl">
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">{classItem.name}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Class details</p>
+        </div>
+        <div className="flex gap-2">
           <Link
             to={`/classes/${classItem.id}/edit`}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+            className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-slate-200 transition-colors"
           >
-            <PencilIcon className="w-4 h-4" />
-            Edit
+            <PencilIcon className="w-4 h-4" /> Edit
           </Link>
           <button
             onClick={handleDelete}
-            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+            className="inline-flex items-center gap-2 bg-red-50 text-red-600 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-red-100 transition-colors"
           >
-            <TrashIcon className="w-4 h-4" />
-            Delete
+            <TrashIcon className="w-4 h-4" /> Delete
           </button>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</dt>
-            <dd className="mt-1 text-sm text-gray-900 dark:text-white">{classItem.name}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Date</dt>
-            <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-              {classItem.date ? new Date(classItem.date).toLocaleDateString() : '-'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Time</dt>
-            <dd className="mt-1 text-sm text-gray-900 dark:text-white">{classItem.time || '-'}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Instructor</dt>
-            <dd className="mt-1 text-sm text-gray-900 dark:text-white">{classItem.instructor || '-'}</dd>
-          </div>
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+        <dl>
+          <Field label="Name" value={classItem.name} />
+          <Field label="Date" value={classItem.date ? new Date(classItem.date).toLocaleDateString() : null} />
+          <Field label="Time" value={classItem.time} />
+          <Field label="Instructor" value={classItem.instructor} />
         </dl>
       </div>
     </div>
@@ -79,4 +66,3 @@ const ClassDetail = () => {
 }
 
 export default ClassDetail
-

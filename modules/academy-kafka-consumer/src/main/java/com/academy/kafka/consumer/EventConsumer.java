@@ -19,139 +19,92 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 
-/**
- * Kafka consumer for domain events with retry mechanism
- * Module: academy-kafka-consumer
- * 
- * Features:
- * - Retry mechanism with exponential backoff
- * - Manual acknowledgment for better error handling
- * - Transaction support for database operations
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class EventConsumer {
-    
+
     private final AuditEventRepository auditEventRepository;
     private final ObjectMapper objectMapper;
-    
+
     @KafkaListener(
         topics = "${kafka.topics.student-registered:student.registered}",
         groupId = "${kafka.consumer.group-id:academy-kafka-consumer-group}",
         containerFactory = "kafkaListenerContainerFactory"
     )
-    @Retryable(
-        retryFor = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 1000, multiplier = 2)
-    )
+    @Retryable(retryFor = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
     @Transactional
-    public void consumeStudentRegistered(
+    public void onStudentRegistered(
             @Payload EventDTO event,
             @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
             @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
             @Header(KafkaHeaders.OFFSET) long offset,
-            Acknowledgment acknowledgment) {
-        
-        log.info("Consuming student.registered event from topic: {}, partition: {}, offset: {}", 
-                topic, partition, offset);
-        
-        try {
-            saveAuditEvent(event);
-            log.info("Successfully processed student.registered event: {}", event.getEventType());
-            
-            // Acknowledge only after successful processing
-            if (acknowledgment != null) {
-                acknowledgment.acknowledge();
-            }
-        } catch (Exception e) {
-            log.error("Error processing student.registered event. Will retry. Event: {}", event, e);
-            throw e; // Re-throw to trigger retry
-        }
+            Acknowledgment ack) {
+
+        log.info("Received '{}' from topic={} partition={} offset={}", event.getEventType(), topic, partition, offset);
+        processAndAcknowledge(event, ack);
     }
-    
+
     @KafkaListener(
         topics = "${kafka.topics.mentor-session-created:mentor.session.created}",
         groupId = "${kafka.consumer.group-id:academy-kafka-consumer-group}",
         containerFactory = "kafkaListenerContainerFactory"
     )
-    @Retryable(
-        retryFor = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 1000, multiplier = 2)
-    )
+    @Retryable(retryFor = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
     @Transactional
-    public void consumeMentorSessionCreated(
+    public void onMentorSessionCreated(
             @Payload EventDTO event,
             @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
             @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
             @Header(KafkaHeaders.OFFSET) long offset,
-            Acknowledgment acknowledgment) {
-        
-        log.info("Consuming mentor.session.created event from topic: {}, partition: {}, offset: {}", 
-                topic, partition, offset);
-        
-        try {
-            saveAuditEvent(event);
-            log.info("Successfully processed mentor.session.created event: {}", event.getEventType());
-            
-            if (acknowledgment != null) {
-                acknowledgment.acknowledge();
-            }
-        } catch (Exception e) {
-            log.error("Error processing mentor.session.created event. Will retry. Event: {}", event, e);
-            throw e;
-        }
+            Acknowledgment ack) {
+
+        log.info("Received '{}' from topic={} partition={} offset={}", event.getEventType(), topic, partition, offset);
+        processAndAcknowledge(event, ack);
     }
-    
+
     @KafkaListener(
         topics = "${kafka.topics.batch-created:batch.created}",
         groupId = "${kafka.consumer.group-id:academy-kafka-consumer-group}",
         containerFactory = "kafkaListenerContainerFactory"
     )
-    @Retryable(
-        retryFor = {Exception.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 1000, multiplier = 2)
-    )
+    @Retryable(retryFor = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
     @Transactional
-    public void consumeBatchCreated(
+    public void onBatchCreated(
             @Payload EventDTO event,
             @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
             @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
             @Header(KafkaHeaders.OFFSET) long offset,
-            Acknowledgment acknowledgment) {
-        
-        log.info("Consuming batch.created event from topic: {}, partition: {}, offset: {}", 
-                topic, partition, offset);
-        
+            Acknowledgment ack) {
+
+        log.info("Received '{}' from topic={} partition={} offset={}", event.getEventType(), topic, partition, offset);
+        processAndAcknowledge(event, ack);
+    }
+
+    // -------------------------------------------------------------------------
+
+    private void processAndAcknowledge(EventDTO event, Acknowledgment ack) {
         try {
-            saveAuditEvent(event);
-            log.info("Successfully processed batch.created event: {}", event.getEventType());
-            
-            if (acknowledgment != null) {
-                acknowledgment.acknowledge();
-            }
-        } catch (Exception e) {
-            log.error("Error processing batch.created event. Will retry. Event: {}", event, e);
-            throw e;
+            persist(event);
+            log.info("Event '{}' processed and stored", event.getEventType());
+            if (ack != null) ack.acknowledge();
+        } catch (Exception ex) {
+            log.error("Failed to process event '{}', scheduling retry", event.getEventType(), ex);
+            throw ex;
         }
     }
-    
-    private void saveAuditEvent(EventDTO event) {
+
+    private void persist(EventDTO event) {
         try {
-            AuditEvent auditEvent = new AuditEvent();
-            auditEvent.setEventType(event.getEventType());
-            auditEvent.setPayload(objectMapper.writeValueAsString(event));
-            auditEvent.setCreatedAt(event.getTimestamp() != null ? event.getTimestamp() : Instant.now());
-            
-            auditEventRepository.save(auditEvent);
-            log.debug("Saved audit event: {}", event.getEventType());
-        } catch (JsonProcessingException e) {
-            log.error("Error serializing event to JSON", e);
-            throw new RuntimeException("Failed to save audit event", e);
+            AuditEvent record = new AuditEvent();
+            record.setEventType(event.getEventType());
+            record.setPayload(objectMapper.writeValueAsString(event));
+            record.setCreatedAt(event.getTimestamp() != null ? event.getTimestamp() : Instant.now());
+            auditEventRepository.save(record);
+            log.debug("Audit record stored for event '{}'", event.getEventType());
+        } catch (JsonProcessingException ex) {
+            log.error("JSON serialization failed for event '{}'", event.getEventType(), ex);
+            throw new RuntimeException("Audit persistence failed for: " + event.getEventType(), ex);
         }
     }
 }
-

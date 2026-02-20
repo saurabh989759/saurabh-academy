@@ -9,42 +9,46 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Kafka producer for student events
- * Module: academy-kafka-producer
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class StudentEventProducer {
-    
+
     private final KafkaTemplate<String, EventDTO> kafkaTemplate;
-    
+
     @Value("${kafka.topics.student-registered:student.registered}")
-    private String studentRegisteredTopic;
-    
+    private String topic;
+
     public void publishStudentRegisteredEvent(Student student) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("studentId", student.getId());
-        payload.put("name", student.getName());
-        payload.put("email", student.getEmail());
-        payload.put("batchId", student.getBatch() != null ? student.getBatch().getId() : null);
-        
+        EventDTO event = buildEvent("student.registered", Map.of(
+            "studentId", student.getId(),
+            "name", student.getName(),
+            "email", student.getEmail(),
+            "batchId", student.getBatch() != null ? student.getBatch().getId() : null
+        ));
+
+        dispatch(topic, event, student.getId());
+    }
+
+    // -------------------------------------------------------------------------
+
+    private EventDTO buildEvent(String type, Map<String, Object> payload) {
         EventDTO event = new EventDTO();
-        event.setEventType("student.registered");
+        event.setEventType(type);
         event.setTimestamp(Instant.now());
         event.setPayload(payload);
-        
+        return event;
+    }
+
+    private void dispatch(String destination, EventDTO event, Object entityId) {
         try {
-            kafkaTemplate.send(studentRegisteredTopic, event);
-            log.info("Published student.registered event for student: {}", student.getId());
-        } catch (Exception e) {
-            log.error("Error publishing student.registered event", e);
-            throw new RuntimeException("Failed to publish student.registered event", e);
+            kafkaTemplate.send(destination, event);
+            log.info("Event '{}' dispatched for entity id={}", event.getEventType(), entityId);
+        } catch (Exception ex) {
+            log.error("Failed to dispatch event '{}': {}", event.getEventType(), ex.getMessage());
+            throw new RuntimeException("Event dispatch failed: " + event.getEventType(), ex);
         }
     }
 }
-

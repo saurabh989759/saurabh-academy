@@ -1,144 +1,98 @@
-# Academy Backend - Production-Ready Spring Boot Application
+# Academy Management System — Backend
 
-A production-ready Spring Boot backend application for managing an academy system with students, batches, classes, mentors, and mentor sessions. Built with Java 21, Spring Boot 3.x, MySQL, Redis caching, Kafka, and JWT authentication.
+A production-grade Spring Boot backend for running an academy platform. Manages students, batches, classes, mentors, and mentor sessions with full CRUD APIs, Redis caching, Kafka event streaming, JWT authentication, and a React frontend.
 
-## 📋 Table of Contents
+**Stack:** Java 21 · Spring Boot 3.2.0 · MySQL 8.0 · Redis 7 · Apache Kafka · Docker
 
-- [Prerequisites](#prerequisites)
-- [Quick Start](#quick-start)
-- [Step-by-Step Setup](#step-by-step-setup)
-- [API Usage Guide](#api-usage-guide)
-- [Redis Caching Behavior](#redis-caching-behavior)
-- [Testing APIs](#testing-apis)
-- [Project Structure](#project-structure)
-- [Technologies Used](#technologies-used)
-- [Documentation](#documentation)
+---
+
+## Contents
+
+- [Getting Started](#getting-started)
+- [Running the Application](#running-the-application)
+- [API Reference](#api-reference)
+- [Caching Behavior](#caching-behavior)
+- [Kafka Topics](#kafka-topics)
+- [Logging](#logging)
+- [Project Layout](#project-layout)
+- [Health & Metrics](#health--metrics)
+- [Testing](#testing)
 - [Troubleshooting](#troubleshooting)
 
 ---
 
-## Prerequisites
+## Getting Started
 
-- **Java 21** or higher
-- **Gradle 8.10+** (or use the included Gradle Wrapper)
-- **Docker and Docker Compose** (recommended)
-- **MySQL 8.0+** (if running database locally)
-- **Redis 7+** (if running Redis locally)
-- **Kafka** (if running Kafka locally)
+### Requirements
+
+| Tool | Version |
+|------|---------|
+| Java | 21+ |
+| Gradle | 8.10+ (or use `./gradlew`) |
+| Docker + Docker Compose | Any recent version |
+| MySQL | 8.0+ (only if running without Docker) |
+| Redis | 7+ (only if running without Docker) |
 
 ---
 
-## Quick Start
+## Running the Application
 
-### Using Docker Compose (Recommended)
+### Option A — Docker Compose (Recommended)
+
+Starts all services — MySQL, Redis, Kafka, Zookeeper, the backend, and the frontend — in one command:
 
 ```bash
-# Clone the repository
 git clone <repository-url>
 cd academy-backend
-
-# Start all services (MySQL, Redis, Kafka, and the application)
-docker-compose up --build
-
-# The application will be available at http://localhost:8080
+docker-compose -f docker-compose.infrastructure.yml up --build
 ```
 
-### Running Locally
+Services will be available at:
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost |
+| Backend API | http://localhost:8080 |
+| Swagger UI | http://localhost:8080/swagger-ui.html |
+| Health Check | http://localhost:8080/actuator/health |
+
+### Option B — Run Locally
 
 ```bash
-# Start MySQL, Redis, and Kafka using Docker Compose
+# Start infrastructure only
 docker-compose -f docker-compose.dev.yml up -d mysql redis kafka zookeeper
 
 # Run the Spring Boot application
 ./gradlew bootRun
-```
 
----
-
-## Step-by-Step Setup
-
-### 1. Clone Project
-
-```bash
-git clone <repository-url>
-cd academy-backend
-```
-
-### 2. Start Infrastructure Services
-
-**Option A: Using Docker Compose (Recommended)**
-
-```bash
-# Start all services
-docker-compose up -d mysql redis kafka zookeeper
-
-# Verify services are running
-docker ps
-```
-
-**Option B: Manual Setup**
-
-- Start MySQL on port 3306
-- Start Redis on port 6379
-- Start Kafka on port 9092
-
-### 3. Verify Redis Connection
-
-```bash
-# Test Redis connection
-docker exec -it academy-redis redis-cli ping
-# Should return: PONG
-
-# Check Redis keys (after running some APIs)
-docker exec -it academy-redis redis-cli KEYS "*"
-```
-
-### 4. Run Spring Boot Application
-
-```bash
-# Using Gradle
-./gradlew bootRun
-
-# Or build and run JAR
+# Or build a JAR and run it
 ./gradlew clean build
 java -jar modules/academy-api/build/libs/academy-api-1.0.0.jar
 ```
 
-### 5. Verify Application Health
+### Verify Everything Is Up
 
 ```bash
-# Health check
 curl http://localhost:8080/actuator/health
-
-# Expected response:
-# {"status":"UP","components":{"db":{"status":"UP"},"redis":{"status":"UP"},"kafka":{"status":"UP"}}}
+# Expected: {"status":"UP","components":{"db":{"status":"UP"},"redis":{"status":"UP"},"kafka":{"status":"UP"}}}
 ```
-
-### 6. Access API Documentation
-
-- **Swagger UI:** http://localhost:8080/swagger-ui.html
-- **OpenAPI JSON:** http://localhost:8080/api-docs
 
 ---
 
-## API Usage Guide
+## API Reference
 
 ### Authentication
 
-**All APIs (except `/api/auth/**`) require JWT authentication.**
+Every endpoint (except `/api/auth/**`) requires a JWT bearer token.
 
-#### Step 1: Login to Get JWT Token
+**Step 1 — Login:**
 
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{
-    "username": "admin@academy.com",
-    "password": "password123"
-  }'
+  -d '{"username": "admin@academy.com", "password": "password123"}'
 ```
 
-**Response:**
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -146,23 +100,20 @@ curl -X POST http://localhost:8080/api/auth/login \
 }
 ```
 
-**Save the token for subsequent requests:**
+**Step 2 — Use the token:**
+
 ```bash
 export JWT_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+curl http://localhost:8080/api/students -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
-#### Step 2: Use Token in API Requests
-
-```bash
-curl -X GET http://localhost:8080/api/students \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
+Default credentials: `admin@academy.com` / `password123`
 
 ---
 
-### Student APIs
+### Students
 
-#### 1. Create Student (Cached on subsequent GET)
+#### Create a Student
 
 ```bash
 curl -X POST http://localhost:8080/api/students \
@@ -178,7 +129,7 @@ curl -X POST http://localhost:8080/api/students \
   }'
 ```
 
-**Response (201):**
+Response `201 Created`:
 ```json
 {
   "id": 1,
@@ -192,80 +143,40 @@ curl -X POST http://localhost:8080/api/students \
 }
 ```
 
-**Caching Behavior:**
-- ✅ Response is NOT cached (POST operation)
-- ✅ Cache is invalidated for `student` and `students` caches
-- ✅ Subsequent GET requests will fetch from database and cache
+Publishes: `student.registered` Kafka event · Invalidates: `student`, `students` caches
 
-#### 2. Get Student by ID (Cached)
+#### Get Student by ID
 
 ```bash
-curl -X GET http://localhost:8080/api/students/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
+curl http://localhost:8080/api/students/1 -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
-**First Request:**
-- ❌ Cache miss → Fetches from database
-- ✅ Stores in Redis with key `student::student:1`
-- ✅ TTL: 30 minutes
+Cached with key `student::student:1` (TTL 30 min). First request hits the database; subsequent requests return from Redis.
 
-**Subsequent Requests (within 30 minutes):**
-- ✅ Cache hit → Returns from Redis (faster)
-- ⏱️ No database query
-
-**Verify Cache:**
 ```bash
-# Check Redis for cached student
+# Inspect the cache
 docker exec -it academy-redis redis-cli KEYS "*student*"
-
-# Check TTL
 docker exec -it academy-redis redis-cli TTL "student::student:1"
 ```
 
-**Response (200):**
-```json
-{
-  "id": 1,
-  "name": "Akhilesh Gupta",
-  "email": "akhilesh@example.com",
-  ...
-}
-```
-
-#### 3. Get All Students (Cached)
+#### List All Students
 
 ```bash
-# Get all students
-curl -X GET "http://localhost:8080/api/students" \
-  -H "Authorization: Bearer $JWT_TOKEN"
+# All students
+curl http://localhost:8080/api/students -H "Authorization: Bearer $JWT_TOKEN"
 
-# Get students by batch
-curl -X GET "http://localhost:8080/api/students?batchId=1" \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
+# Filter by batch
+curl "http://localhost:8080/api/students?batchId=1" -H "Authorization: Bearer $JWT_TOKEN"
 
-**Caching Behavior:**
-- ✅ Cached with key `students::all` or `students::batch:1`
-- ✅ TTL: 30 minutes
-- ✅ Empty results are NOT cached
-
-#### 4. Get All Students (Paginated)
-
-```bash
-curl -X GET "http://localhost:8080/api/students/paged?page=0&size=20&sort=name,asc" \
+# Paginated
+curl "http://localhost:8080/api/students/paged?page=0&size=20&sort=name,asc" \
   -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
-**Response (200):**
+Paginated response:
 ```json
 {
-  "content": [
-    {
-      "id": 1,
-      "name": "Akhilesh Gupta",
-      ...
-    }
-  ],
+  "content": [{ "id": 1, "name": "Akhilesh Gupta", "..." : "..." }],
   "totalElements": 100,
   "totalPages": 5,
   "size": 20,
@@ -275,7 +186,7 @@ curl -X GET "http://localhost:8080/api/students/paged?page=0&size=20&sort=name,a
 }
 ```
 
-#### 5. Update Student (Invalidates Cache)
+#### Update a Student
 
 ```bash
 curl -X PUT http://localhost:8080/api/students/1 \
@@ -291,603 +202,251 @@ curl -X PUT http://localhost:8080/api/students/1 \
   }'
 ```
 
-**Caching Behavior:**
-- ✅ Cache is invalidated for `student::student:1`
-- ✅ All `students::*` list caches are invalidated
-- ✅ Next GET request will fetch fresh data and cache it
+Invalidates `student::student:1` and all `students::*` list caches.
 
-#### 6. Delete Student (Invalidates Cache)
+#### Delete a Student
 
 ```bash
-curl -X DELETE http://localhost:8080/api/students/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
+curl -X DELETE http://localhost:8080/api/students/1 -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
-**Response (204):** No content
-
-**Caching Behavior:**
-- ✅ Cache is invalidated
-- ✅ Student data removed from cache
+Response `204 No Content` · Invalidates caches.
 
 ---
 
-### Batch APIs
-
-#### 1. Create Batch
+### Batches
 
 ```bash
+# Create
 curl -X POST http://localhost:8080/api/batches \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $JWT_TOKEN" \
-  -d '{
-    "name": "FSD-2024-03",
-    "startMonth": "2024-03-01",
-    "currentInstructor": "John Instructor",
-    "batchTypeId": 1,
-    "classIds": [1, 2]
-  }'
-```
+  -H "Content-Type: application/json" -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"name":"FSD-2024-03","startMonth":"2024-03-01","currentInstructor":"John Instructor","batchTypeId":1,"classIds":[1,2]}'
 
-**Kafka Event:** Publishes `batch.created` event
+# Get by ID (cached, TTL 30 min)
+curl http://localhost:8080/api/batches/1 -H "Authorization: Bearer $JWT_TOKEN"
 
-#### 2. Get Batch by ID (Cached)
+# Paginated list
+curl "http://localhost:8080/api/batches?page=0&size=10" -H "Authorization: Bearer $JWT_TOKEN"
 
-```bash
-curl -X GET http://localhost:8080/api/batches/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
-
-**Caching:** ✅ TTL: 30 minutes
-
-#### 3. Get All Batches (Paginated, Cached)
-
-```bash
-curl -X GET "http://localhost:8080/api/batches?page=0&size=10" \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
-
-#### 4. Update Batch
-
-```bash
+# Update
 curl -X PUT http://localhost:8080/api/batches/1 \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $JWT_TOKEN" \
-  -d '{
-    "name": "FSD-2024-03-Updated",
-    "startMonth": "2024-03-01",
-    "currentInstructor": "Jane Instructor",
-    "batchTypeId": 1
-  }'
+  -H "Content-Type: application/json" -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"name":"FSD-2024-03-Updated","startMonth":"2024-03-01","currentInstructor":"Jane Instructor","batchTypeId":1}'
+
+# Delete
+curl -X DELETE http://localhost:8080/api/batches/1 -H "Authorization: Bearer $JWT_TOKEN"
+
+# Assign a class to a batch
+curl -X POST http://localhost:8080/api/batches/1/classes/2 -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
-#### 5. Delete Batch
+Publishes `batch.created` on creation.
+
+---
+
+### Batch Types
 
 ```bash
-curl -X DELETE http://localhost:8080/api/batches/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
+# Create
+curl -X POST http://localhost:8080/api/batch-types \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"name":"Full Stack Development"}'
 
-#### 6. Assign Class to Batch
+# List all (cached, TTL 1 hour)
+curl http://localhost:8080/api/batch-types -H "Authorization: Bearer $JWT_TOKEN"
 
-```bash
-curl -X POST http://localhost:8080/api/batches/1/classes/2 \
-  -H "Authorization: Bearer $JWT_TOKEN"
+# Get by ID
+curl http://localhost:8080/api/batch-types/1 -H "Authorization: Bearer $JWT_TOKEN"
+
+# Update
+curl -X PUT http://localhost:8080/api/batch-types/1 \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"name":"Full Stack Development — Advanced"}'
+
+# Delete
+curl -X DELETE http://localhost:8080/api/batch-types/1 -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
 ---
 
-### Class APIs
-
-#### 1. Create Class
+### Classes
 
 ```bash
+# Create
 curl -X POST http://localhost:8080/api/classes \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $JWT_TOKEN" \
-  -d '{
-    "name": "Introduction to Java",
-    "date": "2024-03-15",
-    "time": "10:00:00",
-    "instructor": "Jane Smith"
-  }'
-```
+  -H "Content-Type: application/json" -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"name":"Introduction to Java","date":"2024-03-15","time":"10:00:00","instructor":"Jane Smith"}'
 
-#### 2. Get All Classes (Cached)
+# List all (cached)
+curl http://localhost:8080/api/classes -H "Authorization: Bearer $JWT_TOKEN"
 
-```bash
-curl -X GET http://localhost:8080/api/classes \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
+# Get by ID
+curl http://localhost:8080/api/classes/1 -H "Authorization: Bearer $JWT_TOKEN"
 
-#### 3. Get Class by ID (Cached)
-
-```bash
-curl -X GET http://localhost:8080/api/classes/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
-
-#### 4. Update Class
-
-```bash
+# Update
 curl -X PUT http://localhost:8080/api/classes/1 \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $JWT_TOKEN" \
-  -d '{
-    "name": "Advanced Java",
-    "date": "2024-03-20",
-    "time": "14:00:00",
-    "instructor": "John Doe"
-  }'
-```
+  -H "Content-Type: application/json" -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"name":"Advanced Java","date":"2024-03-20","time":"14:00:00","instructor":"John Doe"}'
 
-#### 5. Delete Class
-
-```bash
-curl -X DELETE http://localhost:8080/api/classes/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
+# Delete
+curl -X DELETE http://localhost:8080/api/classes/1 -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
 ---
 
-### Mentor APIs
-
-#### 1. Create Mentor
+### Mentors
 
 ```bash
+# Create
 curl -X POST http://localhost:8080/api/mentors \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $JWT_TOKEN" \
-  -d '{
-    "name": "Alice Johnson",
-    "currentCompany": "Tech Corp"
-  }'
-```
+  -H "Content-Type: application/json" -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"name":"Alice Johnson","currentCompany":"Tech Corp"}'
 
-#### 2. Get All Mentors (Cached, TTL: 1 hour)
+# List all (cached, TTL 1 hour — stable reference data)
+curl http://localhost:8080/api/mentors -H "Authorization: Bearer $JWT_TOKEN"
 
-```bash
-curl -X GET http://localhost:8080/api/mentors \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
+# Get by ID
+curl http://localhost:8080/api/mentors/1 -H "Authorization: Bearer $JWT_TOKEN"
 
-**Caching:** ✅ TTL: 1 hour (stable reference data)
-
-#### 3. Get Mentor by ID (Cached, TTL: 1 hour)
-
-```bash
-curl -X GET http://localhost:8080/api/mentors/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
-
-#### 4. Update Mentor
-
-```bash
+# Update
 curl -X PUT http://localhost:8080/api/mentors/1 \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $JWT_TOKEN" \
-  -d '{
-    "name": "Alice Johnson Updated",
-    "currentCompany": "New Tech Corp"
-  }'
-```
+  -H "Content-Type: application/json" -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"name":"Alice Johnson","currentCompany":"New Tech Corp"}'
 
-#### 5. Delete Mentor
-
-```bash
-curl -X DELETE http://localhost:8080/api/mentors/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
+# Delete
+curl -X DELETE http://localhost:8080/api/mentors/1 -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
 ---
 
-### Mentor Session APIs
-
-#### 1. Create Mentor Session
+### Mentor Sessions
 
 ```bash
+# Create (publishes mentor.session.created event)
 curl -X POST http://localhost:8080/api/mentor-sessions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $JWT_TOKEN" \
-  -d '{
-    "time": "2024-03-20T15:00:00Z",
-    "durationMinutes": 60,
-    "studentId": 1,
-    "mentorId": 1
-  }'
-```
+  -H "Content-Type: application/json" -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"time":"2024-03-20T15:00:00Z","durationMinutes":60,"studentId":1,"mentorId":1}'
 
-**Kafka Event:** Publishes `mentor.session.created` event
+# List all (cached, TTL 10 min — frequently changing)
+curl http://localhost:8080/api/mentor-sessions -H "Authorization: Bearer $JWT_TOKEN"
 
-#### 2. Get All Mentor Sessions (Cached, TTL: 10 minutes)
+# Get by ID
+curl http://localhost:8080/api/mentor-sessions/1 -H "Authorization: Bearer $JWT_TOKEN"
 
-```bash
-curl -X GET http://localhost:8080/api/mentor-sessions \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
-
-**Caching:** ✅ TTL: 10 minutes (frequently changing data)
-
-#### 3. Get Mentor Session by ID (Cached, TTL: 10 minutes)
-
-```bash
-curl -X GET http://localhost:8080/api/mentor-sessions/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
-
-#### 4. Update Mentor Session
-
-```bash
+# Update (with ratings)
 curl -X PUT http://localhost:8080/api/mentor-sessions/1 \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $JWT_TOKEN" \
-  -d '{
-    "time": "2024-03-21T16:00:00Z",
-    "durationMinutes": 90,
-    "studentId": 1,
-    "mentorId": 1,
-    "studentRating": 5,
-    "mentorRating": 4
-  }'
-```
+  -H "Content-Type: application/json" -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"time":"2024-03-21T16:00:00Z","durationMinutes":90,"studentId":1,"mentorId":1,"studentRating":5,"mentorRating":4}'
 
-#### 5. Delete Mentor Session
-
-```bash
-curl -X DELETE http://localhost:8080/api/mentor-sessions/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
+# Delete
+curl -X DELETE http://localhost:8080/api/mentor-sessions/1 -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
 ---
 
-## Redis Caching Behavior
+## Caching Behavior
 
-### Cache Key Patterns
-
-**Current Implementation (Spring Cache):**
-- `student::student:1` - Individual student
-- `students::batch:1` - Students by batch
-- `students::all` - All students
-- `batch::batch:1` - Individual batch
-- `mentor::mentor:1` - Individual mentor (TTL: 1 hour)
-- `mentorSession::mentorSession:1` - Individual session (TTL: 10 minutes)
+The application uses Spring Cache with Redis as the backing store.
 
 ### TTL Configuration
 
-| Cache Name | TTL | Reason |
-|------------|-----|--------|
-| `mentorSessions`, `mentorSession` | 10 minutes | Frequently changing |
-| `mentors`, `mentor`, `batchTypes`, `batchType` | 1 hour | Stable reference data |
-| `students`, `student`, `batches`, `batch`, `classes`, `class` | 30 minutes | Default for transactional data |
+| Cache | TTL | Rationale |
+|-------|-----|-----------|
+| `mentorSession`, `mentorSessions` | 10 min | Session data changes frequently |
+| `mentor`, `mentors`, `batchType`, `batchTypes` | 1 hour | Reference data, rarely modified |
+| `student`, `students`, `batch`, `batches`, `class`, `classes` | 30 min | General transactional data |
 
-### Cache Operations
+### What Gets Cached vs. What Doesn't
 
-**What Gets Cached:**
-- ✅ GET operations (read-only)
-- ✅ Non-null results
-- ✅ Non-empty collections
+| Cached | Not Cached |
+|--------|------------|
+| GET responses | POST / PUT / DELETE responses |
+| Non-null values | Null values |
+| Non-empty collections | Empty collections |
+| Successful responses | Error responses |
 
-**What Doesn't Get Cached:**
-- ❌ POST/PUT/DELETE responses
-- ❌ Null values
-- ❌ Empty collections
-- ❌ Error responses
+### Redis Cache Key Patterns
 
-### Monitoring Cache
+```
+student::student:1        → single student
+students::batch:1         → students filtered by batch
+students::all             → full student list
+batch::batch:1            → single batch
+mentor::mentor:1          → single mentor
+mentorSession::mentorSession:1  → single session
+```
+
+### Monitor the Cache
 
 ```bash
 # List all cache keys
 docker exec -it academy-redis redis-cli KEYS "*"
 
-# List student cache keys
-docker exec -it academy-redis redis-cli KEYS "*student*"
-
 # Check TTL of a key
 docker exec -it academy-redis redis-cli TTL "student::student:1"
 
-# Get cached value
+# Read a cached value
 docker exec -it academy-redis redis-cli GET "student::student:1"
 
-# Monitor Redis commands in real-time
+# Watch Redis commands live
 docker exec -it academy-redis redis-cli MONITOR
 
-# Get Redis info
-docker exec -it academy-redis redis-cli INFO
-```
-
----
-
-## Testing APIs
-
-### Using cURL (Command Line)
-
-All examples above use cURL. Save your JWT token:
-
-```bash
-export JWT_TOKEN="your-token-here"
-```
-
-### Using Postman
-
-1. Import the Postman collection: `postman/Academy.postman_collection.json`
-2. Set up environment variables:
-   - `base_url`: `http://localhost:8080`
-   - `jwt_token`: (from login response)
-3. Run requests from the collection
-
-### Using Swagger UI
-
-1. Open http://localhost:8080/swagger-ui.html
-2. Click "Authorize" button
-3. Enter: `Bearer <your-jwt-token>`
-4. Test APIs directly from the UI
-
-### Verify Caching
-
-**Test Cache Hit:**
-```bash
-# First request (cache miss)
-time curl -X GET http://localhost:8080/api/students/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
-
-# Second request (cache hit - should be faster)
-time curl -X GET http://localhost:8080/api/students/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
-
-**Test Cache Invalidation:**
-```bash
-# Get student (cached)
-curl -X GET http://localhost:8080/api/students/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
-
-# Update student (invalidates cache)
-curl -X PUT http://localhost:8080/api/students/1 \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $JWT_TOKEN" \
-  -d '{"name": "Updated Name", ...}'
-
-# Next GET will fetch from database and cache again
-curl -X GET http://localhost:8080/api/students/1 \
-  -H "Authorization: Bearer $JWT_TOKEN"
-```
-
----
-
-## Project Structure
-
-```
-academy-backend/
-├── modules/
-│   ├── academy-api/              # API layer (controllers, security, config)
-│   │   ├── src/main/java/com/academy/
-│   │   │   ├── controller/       # REST controllers (OpenAPI-generated)
-│   │   │   ├── security/         # JWT authentication
-│   │   │   └── config/            # Redis, Kafka, Security config
-│   │   └── src/main/resources/
-│   │       ├── application.yml    # Configuration
-│   │       └── openapi.yaml       # OpenAPI specification
-│   ├── academy-service/          # Business logic
-│   │   └── src/main/java/com/academy/
-│   │       ├── service/           # Service layer
-│   │       ├── mapper/            # MapStruct mappers
-│   │       ├── aspect/            # AOP aspects (locking)
-│   │       └── annotation/        # Custom annotations
-│   ├── academy-common/           # Shared components
-│   │   └── src/main/java/com/academy/
-│   │       ├── entity/            # JPA entities
-│   │       ├── dto/               # Data transfer objects
-│   │       ├── repository/        # JPA repositories
-│   │       └── exception/        # Exception handling
-│   ├── academy-kafka-producer/   # Kafka event producers
-│   └── academy-kafka-consumer/   # Kafka event consumers
-├── docker-compose.yml             # Docker Compose configuration
-├── Dockerfile                     # Application Dockerfile
-├── README.md                      # This file
-├── PROJECT_DOCUMENTATION.md       # Complete technical documentation
-└── postman/                       # Postman collection
-```
-
----
-
-## Technologies Used
-
-- **Java 21** - Programming language
-- **Spring Boot 3.2.0** - Application framework
-- **Spring Data JPA** - Data persistence
-- **Spring Data Redis** - Caching layer
-- **Spring Kafka** - Event-driven messaging
-- **Spring Security** - Authentication & authorization
-- **MySQL 8.0** - Relational database
-- **Redis 7** - In-memory cache
-- **Apache Kafka** - Message broker
-- **Flyway** - Database migrations
-- **MapStruct** - DTO mapping
-- **Lombok** - Boilerplate reduction
-- **OpenAPI/Swagger** - API documentation
-- **Docker & Docker Compose** - Containerization
-- **JUnit & Mockito** - Testing
-- **Testcontainers** - Integration testing
-
----
-
-## Documentation
-
-- **Complete Technical Documentation:** See [PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)
-- **API Documentation:** http://localhost:8080/swagger-ui.html
-- **OpenAPI Spec:** http://localhost:8080/api-docs
-
----
-
-## Troubleshooting
-
-### Application Won't Start
-
-1. **Database Connection Issues:**
-   ```bash
-   # Check MySQL is running
-   docker ps | grep mysql
-   
-   # Test MySQL connection
-   docker exec -it academy-mysql mysql -uroot -prootpassword -e "SELECT 1"
-   ```
-
-2. **Redis Connection Issues:**
-   ```bash
-   # Check Redis is running
-   docker ps | grep redis
-   
-   # Test Redis connection
-   docker exec -it academy-redis redis-cli ping
-   ```
-
-3. **Kafka Connection Issues:**
-   ```bash
-   # Check Kafka is running
-   docker ps | grep kafka
-   
-   # List Kafka topics
-   docker exec -it academy-kafka kafka-topics --list --bootstrap-server localhost:9092
-   ```
-
-4. **Port Conflicts:**
-   ```bash
-   # Check if ports are in use
-   lsof -i :8080  # Application
-   lsof -i :3306  # MySQL
-   lsof -i :6379  # Redis
-   lsof -i :9092  # Kafka
-   ```
-
-### Viewing Logs
-
-```bash
-# Application logs
-docker logs academy-backend -f
-
-# MySQL logs
-docker logs academy-mysql -f
-
-# Redis logs
-docker logs academy-redis -f
-
-# Kafka logs
-docker logs academy-kafka -f
-```
-
-### Database Access
-
-```bash
-# Connect to MySQL
-docker exec -it academy-mysql mysql -uroot -prootpassword academy_db
-
-# Run SQL queries
-docker exec -it academy-mysql mysql -uroot -prootpassword academy_db -e "SELECT * FROM students;"
-```
-
-### Reset Everything
-
-```bash
-# Stop and remove all containers and volumes
-docker-compose down -v
-
-# Start fresh
-docker-compose up --build
-```
-
-### Cache Issues
-
-```bash
-# Clear all Redis cache
+# Clear all cache
 docker exec -it academy-redis redis-cli FLUSHALL
-
-# Clear specific cache pattern
-docker exec -it academy-redis redis-cli --scan --pattern "*student*" | xargs docker exec -it academy-redis redis-cli DEL
 ```
 
-### JWT Token Issues
+### Testing Cache Hit / Miss
 
 ```bash
-# Get new token
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin@academy.com", "password": "password123"}'
+# First call hits the database
+time curl http://localhost:8080/api/students/1 -H "Authorization: Bearer $JWT_TOKEN"
 
-# Validate token
-curl -X POST http://localhost:8080/api/auth/validate \
-  -H "Content-Type: application/json" \
-  -d '{"token": "your-token-here"}'
+# Second call returns from Redis
+time curl http://localhost:8080/api/students/1 -H "Authorization: Bearer $JWT_TOKEN"
 ```
 
 ---
 
-## Running Tests
+## Kafka Topics
 
-### Unit Tests
+| Topic | Published When |
+|-------|----------------|
+| `student.registered` | A student is created |
+| `mentor.session.created` | A mentor session is booked |
+| `batch.created` | A batch is created |
 
-```bash
-./gradlew test
-```
+All topics are auto-created with 3 partitions and replication factor 1.
 
-### Integration Tests
-
-```bash
-./gradlew test --tests "*Integration*"
-```
-
-### All Tests
+### Inspect Topics
 
 ```bash
-./gradlew clean test
+# List topics
+docker exec -it academy-kafka kafka-topics --list --bootstrap-server localhost:9092
+
+# Consume messages
+docker exec -it academy-kafka kafka-console-consumer \
+  --bootstrap-server localhost:9092 \
+  --topic student.registered \
+  --from-beginning
 ```
 
 ---
 
 ## Logging
 
-### Logging Configuration
+The application uses **Logback** with JSON output and **Logbook** for HTTP request/response tracing.
 
-The application uses **Logback** with **JSON formatting** for structured logging and **Logbook** for HTTP request/response logging.
+### Log Levels
 
-#### Logback Configuration
+| Package | Level |
+|---------|-------|
+| `com.academy` | INFO |
+| `org.zalando.logbook.Logbook` | TRACE |
+| `org.springframework` | WARN |
+| `org.hibernate` | WARN |
 
-**Location:** `modules/academy-api/src/main/resources/logback-spring.xml`
+### Sample Log Entry
 
-**Features:**
-- JSON formatted console output
-- Structured logging for easy parsing
-- Logbook integration for HTTP traces
-- Configurable log levels per package
-
-**Log Levels:**
-- `com.academy` - INFO (application logs)
-- `org.zalando.logbook.Logbook` - TRACE (HTTP request/response)
-- `org.springframework` - WARN (framework logs)
-- `org.hibernate` - WARN (database logs)
-
-#### Logbook HTTP Logging
-
-**Configuration:** `modules/academy-api/src/main/resources/application.yml`
-
-**Features:**
-- JSON format for HTTP logs
-- Sensitive data obfuscation (passwords, tokens, Authorization headers)
-- Excludes actuator and Swagger endpoints
-- INFO level logging
-
-**Obfuscated Fields:**
-- Parameters: `password`, `token`, `secret`
-- Headers: `Authorization`, `Cookie`, `X-Api-Key`
-
-**Excluded Paths:**
-- `/actuator/**`
-- `/swagger-ui/**`
-- `/api-docs/**`
-- `/v3/api-docs/**`
-- `/favicon.ico`
-
-#### Log Format
-
-**Application Logs (JSON):**
 ```json
 {
   "timestamp": "2024-11-29T12:00:00.000+05:30",
@@ -898,95 +457,164 @@ The application uses **Logback** with **JSON formatting** for structured logging
 }
 ```
 
-**HTTP Request/Response Logs (Logbook):**
-```json
-{
-  "origin": "remote",
-  "type": "request",
-  "correlation": "abc123",
-  "protocol": "HTTP/1.1",
-  "remote": "127.0.0.1",
-  "method": "POST",
-  "uri": "/api/students",
-  "headers": {
-    "Authorization": "***",
-    "Content-Type": ["application/json"]
-  },
-  "body": "{\"name\":\"...\",\"password\":\"***\"}"
-}
-```
+### Obfuscated Fields (via Logbook)
 
-#### Viewing Logs
+Parameters: `password`, `token`, `secret`
+Headers: `Authorization`, `Cookie`, `X-Api-Key`
 
-**Docker:**
+### Excluded from HTTP Logging
+
+`/actuator/**`, `/swagger-ui/**`, `/api-docs/**`, `/v3/api-docs/**`, `/favicon.ico`
+
+### View Logs
+
 ```bash
-# Application logs
+# Docker
 docker logs academy-backend -f
 
-# Follow logs with JSON formatting
+# Pretty-print JSON logs
 docker logs academy-backend -f | jq
-```
 
-**Local:**
-```bash
-# Logs are output to console in JSON format
-# Can be piped to log aggregation tools
+# Local
 ./gradlew bootRun | jq
 ```
 
-#### Log Aggregation
+Compatible with ELK Stack, Splunk, CloudWatch, Datadog, and Loki.
 
-The JSON format enables easy integration with:
-- **ELK Stack** (Elasticsearch, Logstash, Kibana)
-- **Splunk**
-- **CloudWatch Logs**
-- **Datadog**
-- **Loki** (Grafana)
+---
 
-#### Logging Best Practices
+## Project Layout
 
-1. **Use `@Slf4j` annotation** - All classes use Lombok's `@Slf4j`
-2. **Structured logging** - JSON format for machine parsing
-3. **Sensitive data** - Automatically obfuscated by Logbook
-4. **Log levels** - Appropriate levels (INFO for business, DEBUG for troubleshooting)
-5. **Correlation IDs** - Logbook provides correlation IDs for request tracing
+```
+academy-backend/
+├── modules/
+│   ├── academy-api/              # REST controllers, JWT security, configuration
+│   │   └── src/main/
+│   │       ├── java/com/academy/
+│   │       │   ├── controller/   # OpenAPI-generated interface implementations
+│   │       │   ├── security/     # JWT filter, UserDetailsService
+│   │       │   └── config/       # Redis, Kafka, Security, OpenAPI configs
+│   │       └── resources/
+│   │           ├── application.yml
+│   │           └── openapi.yaml  # Source of truth for API contracts
+│   ├── academy-service/          # Business logic
+│   │   └── java/com/academy/
+│   │       ├── service/          # Service layer with caching annotations
+│   │       ├── mapper/           # MapStruct DTO ↔ entity mappers
+│   │       ├── aspect/           # AOP: distributed lock interceptor
+│   │       └── annotation/       # @WithLock custom annotation
+│   ├── academy-common/           # Shared across modules
+│   │   └── java/com/academy/
+│   │       ├── entity/           # JPA entities
+│   │       ├── dto/              # Data transfer objects
+│   │       ├── repository/       # Spring Data JPA repositories
+│   │       └── exception/        # Exception hierarchy + global handler
+│   ├── academy-kafka-producer/   # Domain event publishers
+│   └── academy-kafka-consumer/   # Audit event consumers
+├── frontend/                     # React 18 + TypeScript UI
+├── docker-compose.infrastructure.yml
+├── Dockerfile
+└── postman/                      # Postman collection for API testing
+```
 
 ---
 
 ## Health & Metrics
 
-- **Health Check:** http://localhost:8080/actuator/health
-- **Metrics:** http://localhost:8080/actuator/metrics
-- **Prometheus:** http://localhost:8080/actuator/prometheus
+| Endpoint | Description |
+|----------|-------------|
+| `/actuator/health` | Application, DB, Redis, Kafka health |
+| `/actuator/metrics` | JVM, HTTP, cache metrics |
+| `/actuator/prometheus` | Prometheus-format metrics |
 
 ---
 
-## Kafka Topics
-
-The application uses the following Kafka topics:
-- `student.registered` - Published when a student is registered
-- `mentor.session.created` - Published when a mentor session is created
-- `batch.created` - Published when a batch is created
-
-### View Kafka Messages
+## Testing
 
 ```bash
-# List topics
+# All tests
+./gradlew test
+
+# Integration tests only
+./gradlew test --tests "*Integration*"
+
+# Unit tests only (exclude integration)
+./gradlew test --tests "*Test" --exclude-tests "*Integration*"
+
+# Clean run
+./gradlew clean test
+```
+
+### Testing Tools
+
+- **Postman**: Import `postman/Academy.postman_collection.json`; set `base_url` and `jwt_token` environment variables
+- **Swagger UI**: http://localhost:8080/swagger-ui.html — click Authorize, enter `Bearer <token>`
+
+---
+
+## Troubleshooting
+
+### Application Won't Start
+
+```bash
+# MySQL not ready?
+docker ps | grep mysql
+docker exec -it academy-mysql mysql -uroot -prootpassword -e "SELECT 1"
+
+# Redis not reachable?
+docker exec -it academy-redis redis-cli ping
+
+# Kafka not up?
 docker exec -it academy-kafka kafka-topics --list --bootstrap-server localhost:9092
 
-# Consume messages from a topic
-docker exec -it academy-kafka kafka-console-consumer \
-  --bootstrap-server localhost:9092 \
-  --topic student.registered \
-  --from-beginning
+# Port conflicts?
+lsof -i :8080   # application
+lsof -i :3306   # MySQL
+lsof -i :6379   # Redis
+lsof -i :9092   # Kafka
+```
+
+### View Container Logs
+
+```bash
+docker logs academy-backend -f
+docker logs academy-mysql -f
+docker logs academy-redis -f
+docker logs academy-kafka -f
+```
+
+### Database Access
+
+```bash
+docker exec -it academy-mysql mysql -uroot -prootpassword academy_db
+docker exec -it academy-mysql mysql -uroot -prootpassword academy_db -e "SELECT * FROM students;"
+```
+
+### JWT Token Issues
+
+```bash
+# Get a fresh token
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin@academy.com", "password": "password123"}'
+```
+
+### Full Reset
+
+```bash
+docker-compose down -v
+docker-compose up --build
 ```
 
 ---
 
-## License
+## Documentation
 
-This project is for educational purposes.
+- **Technical Architecture:** [PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)
+- **Project Report:** [PROJECT_REPORT.md](./PROJECT_REPORT.md)
+- **Swagger UI:** http://localhost:8080/swagger-ui.html
+- **OpenAPI JSON:** http://localhost:8080/api-docs
 
 ---
 
-**For complete technical documentation, see [PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)**
+*This project is for educational purposes.*

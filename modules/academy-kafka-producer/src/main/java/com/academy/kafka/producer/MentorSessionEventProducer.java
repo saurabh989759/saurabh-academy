@@ -9,43 +9,47 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Kafka producer for mentor session events
- * Module: academy-kafka-producer
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class MentorSessionEventProducer {
-    
+
     private final KafkaTemplate<String, EventDTO> kafkaTemplate;
-    
+
     @Value("${kafka.topics.mentor-session-created:mentor.session.created}")
-    private String mentorSessionCreatedTopic;
-    
+    private String topic;
+
     public void publishSessionCreatedEvent(MentorSession session) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("sessionId", session.getId());
-        payload.put("studentId", session.getStudent().getId());
-        payload.put("mentorId", session.getMentor().getId());
-        payload.put("time", session.getTime().toString());
-        payload.put("durationMinutes", session.getDurationMinutes());
-        
+        EventDTO event = buildEvent("mentor.session.created", Map.of(
+            "sessionId", session.getId(),
+            "studentId", session.getStudent().getId(),
+            "mentorId", session.getMentor().getId(),
+            "time", session.getTime().toString(),
+            "durationMinutes", session.getDurationMinutes()
+        ));
+
+        dispatch(topic, event, session.getId());
+    }
+
+    // -------------------------------------------------------------------------
+
+    private EventDTO buildEvent(String type, Map<String, Object> payload) {
         EventDTO event = new EventDTO();
-        event.setEventType("mentor.session.created");
+        event.setEventType(type);
         event.setTimestamp(Instant.now());
         event.setPayload(payload);
-        
+        return event;
+    }
+
+    private void dispatch(String destination, EventDTO event, Object entityId) {
         try {
-            kafkaTemplate.send(mentorSessionCreatedTopic, event);
-            log.info("Published mentor.session.created event for session: {}", session.getId());
-        } catch (Exception e) {
-            log.error("Error publishing mentor.session.created event", e);
-            throw new RuntimeException("Failed to publish mentor.session.created event", e);
+            kafkaTemplate.send(destination, event);
+            log.info("Event '{}' dispatched for entity id={}", event.getEventType(), entityId);
+        } catch (Exception ex) {
+            log.error("Failed to dispatch event '{}': {}", event.getEventType(), ex.getMessage());
+            throw new RuntimeException("Event dispatch failed: " + event.getEventType(), ex);
         }
     }
 }
-

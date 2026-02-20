@@ -1,17 +1,13 @@
 package com.academy.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.Instant;
 import java.util.Map;
 
-/**
- * Report: Kafka Integration - Event DTO for Kafka messages
- * Generic event DTO for Kafka event publishing
- */
-@Data
+@Getter
+@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class EventDTO {
@@ -19,4 +15,3 @@ public class EventDTO {
     private Instant timestamp;
     private Map<String, Object> payload;
 }
-

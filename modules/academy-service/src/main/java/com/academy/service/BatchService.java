@@ -22,100 +22,80 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * Service for Batch operations
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class BatchService {
-    
+
     private final BatchRepository batchRepository;
     private final BatchTypeRepository batchTypeRepository;
     private final ClassRepository classRepository;
     private final BatchMapper batchMapper;
     private final BatchEventProducer eventProducer;
-    
+
     @Transactional(readOnly = true)
     public Page<BatchDTO> getAllBatches(Pageable pageable) {
-        return batchRepository.findAll(pageable)
-            .map(batchMapper::toDTO);
+        return batchRepository.findAll(pageable).map(batchMapper::toDTO);
     }
-    
+
     @Transactional(readOnly = true)
     @Cacheable(value = "batch", key = "'batch:' + #id", unless = "#result == null")
     public BatchDTO getBatchById(Long id) {
-        Batch batch = batchRepository.findById(id)
-            .orElseThrow(() -> new BatchNotFoundException(id));
-        return batchMapper.toDTO(batch);
+        return batchMapper.toDTO(fetchBatchOrThrow(id));
     }
-    
-    @WithLock(key = "batch:create:#{#dto.name}", timeout = 30, maxRetries = 3, waitTimeout = 10)
+
+    @WithLock(key = "batch:create:#{#request.name}", timeout = 30, maxRetries = 3, waitTimeout = 10)
     @Transactional
     @CacheEvict(value = {"batch", "batches"}, allEntries = true)
-    public BatchDTO createBatch(BatchDTO dto) {
-        log.info("Creating batch: {}", dto.getName());
-        
-        // Check if batch with same name already exists (lock is automatically acquired by @WithLock)
+    public BatchDTO createBatch(BatchDTO request) {
+        log.info("Creating a new batch named: {}", request.getName());
+
         batchRepository.findAll().stream()
-            .filter(b -> b.getName().equals(dto.getName()))
+            .filter(b -> b.getName().equals(request.getName()))
             .findFirst()
-            .ifPresent(existing -> {
-                throw new IllegalStateException("Batch with name " + dto.getName() + " already exists");
+            .ifPresent(conflict -> {
+                throw new IllegalStateException("Batch '" + request.getName() + "' already exists");
             });
-        
-        Batch batch = batchMapper.toEntity(dto);
-        
-        BatchType batchType = batchTypeRepository.findById(dto.getBatchTypeId())
-            .orElseThrow(() -> new BatchTypeNotFoundException(dto.getBatchTypeId()));
-        batch.setBatchType(batchType);
-        
-        if (dto.getClassIds() != null && !dto.getClassIds().isEmpty()) {
-            batch.setClasses(dto.getClassIds().stream()
-                .map(classId -> classRepository.findById(classId)
-                    .orElseThrow(() -> new ClassNotFoundException(classId)))
-                .collect(Collectors.toSet()));
+
+        Batch batch = batchMapper.toEntity(request);
+        batch.setBatchType(resolveBatchType(request.getBatchTypeId()));
+
+        if (request.getClassIds() != null && !request.getClassIds().isEmpty()) {
+            batch.setClasses(resolveClasses(request.getClassIds()));
         }
-        
-        Batch saved = batchRepository.save(batch);
-        log.info("Batch created with id: {}", saved.getId());
-        
-        eventProducer.publishBatchCreatedEvent(saved);
-        
-        return batchMapper.toDTO(saved);
+
+        Batch persisted = batchRepository.save(batch);
+        log.info("Batch created, id={}", persisted.getId());
+        eventProducer.publishBatchCreatedEvent(persisted);
+
+        return batchMapper.toDTO(persisted);
     }
-    
+
     @WithLock(key = "batch:update:#{#id}", timeout = 30, maxRetries = 3, waitTimeout = 10)
     @Transactional
     @CacheEvict(value = {"batch", "batches"}, key = "'batch:' + #id", allEntries = true)
-    public BatchDTO updateBatch(Long id, BatchDTO dto) {
-        // Use pessimistic lock to prevent concurrent updates
+    public BatchDTO updateBatch(Long id, BatchDTO request) {
         Batch batch = batchRepository.findByIdWithLock(id)
             .orElseThrow(() -> new BatchNotFoundException(id));
-        
-        batch.setName(dto.getName());
-        batch.setStartMonth(dto.getStartMonth());
-        batch.setCurrentInstructor(dto.getCurrentInstructor());
-        
-        if (dto.getBatchTypeId() != null) {
-            BatchType batchType = batchTypeRepository.findById(dto.getBatchTypeId())
-                .orElseThrow(() -> new BatchTypeNotFoundException(dto.getBatchTypeId()));
-            batch.setBatchType(batchType);
+
+        batch.setName(request.getName());
+        batch.setStartMonth(request.getStartMonth());
+        batch.setCurrentInstructor(request.getCurrentInstructor());
+
+        if (request.getBatchTypeId() != null) {
+            batch.setBatchType(resolveBatchType(request.getBatchTypeId()));
         }
-        
-        if (dto.getClassIds() != null) {
-            batch.setClasses(dto.getClassIds().stream()
-                .map(classId -> classRepository.findById(classId)
-                    .orElseThrow(() -> new ClassNotFoundException(classId)))
-                .collect(Collectors.toSet()));
+
+        if (request.getClassIds() != null) {
+            batch.setClasses(resolveClasses(request.getClassIds()));
         }
-        
-        Batch updated = batchRepository.save(batch);
-        return batchMapper.toDTO(updated);
+
+        return batchMapper.toDTO(batchRepository.save(batch));
     }
-    
+
     @Transactional
     @CacheEvict(value = {"batch", "batches"}, key = "'batch:' + #id", allEntries = true)
     public void deleteBatch(Long id) {
@@ -123,30 +103,45 @@ public class BatchService {
             throw new BatchNotFoundException(id);
         }
         batchRepository.deleteById(id);
-        log.info("Batch deleted with id: {}", id);
+        log.info("Batch {} has been removed", id);
     }
-    
+
     @WithLock(key = "batch:assign:class:#{#batchId}:#{#classId}", timeout = 30, maxRetries = 3, waitTimeout = 10)
     @Transactional
     @CacheEvict(value = {"batch", "batches"}, key = "'batch:' + #batchId", allEntries = true)
     public BatchDTO assignClassToBatch(Long batchId, Long classId) {
-        // Use pessimistic lock + custom distributed lock for class assignment
         Batch batch = batchRepository.findByIdWithLock(batchId)
             .orElseThrow(() -> new BatchNotFoundException(batchId));
-        
+
         ClassEntity classEntity = classRepository.findById(classId)
             .orElseThrow(() -> new ClassNotFoundException(classId));
-        
-        // Check if class is already assigned
+
         if (batch.getClasses().contains(classEntity)) {
-            log.warn("Class {} already assigned to batch {}", classId, batchId);
+            log.warn("Class {} is already linked to batch {}, skipping", classId, batchId);
             return batchMapper.toDTO(batch);
         }
-        
+
         batch.getClasses().add(classEntity);
-        Batch updated = batchRepository.save(batch);
-        
-        return batchMapper.toDTO(updated);
+        return batchMapper.toDTO(batchRepository.save(batch));
+    }
+
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
+    private Batch fetchBatchOrThrow(Long id) {
+        return batchRepository.findById(id).orElseThrow(() -> new BatchNotFoundException(id));
+    }
+
+    private BatchType resolveBatchType(Long typeId) {
+        return batchTypeRepository.findById(typeId)
+            .orElseThrow(() -> new BatchTypeNotFoundException(typeId));
+    }
+
+    private Set<ClassEntity> resolveClasses(Set<Long> classIds) {
+        return classIds.stream()
+            .map(cid -> classRepository.findById(cid)
+                .orElseThrow(() -> new ClassNotFoundException(cid)))
+            .collect(Collectors.toSet());
     }
 }
-

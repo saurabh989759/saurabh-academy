@@ -19,69 +19,56 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * Controller implementing generated StudentsApi interface
- * Uses generated request/response models from OpenAPI
- * Directly delegates to StudentService
- */
 @RestController
 @RequiredArgsConstructor
 @Slf4j
 public class StudentController implements StudentsApi {
-    
+
     private final StudentService studentService;
-    private final ApiModelMapper apiModelMapper;
-    private final WebSocketEventPublisher webSocketEventPublisher;
-    
+    private final ApiModelMapper mapper;
+    private final WebSocketEventPublisher eventPublisher;
+
     @Override
     public ResponseEntity<Student> createStudent(StudentInput studentInput) {
-        log.debug("Creating student: {}", studentInput.getEmail());
-        StudentDTO dto = apiModelMapper.toDTO(studentInput);
-        StudentDTO created = studentService.createStudent(dto);
-        // Publish WebSocket event
-        webSocketEventPublisher.publishStudentCreated(created.getId(), created.getEmail());
-        return ResponseEntity.status(HttpStatus.CREATED).body(apiModelMapper.toModel(created));
+        log.debug("POST /students — email={}", studentInput.getEmail());
+        StudentDTO created = studentService.createStudent(mapper.toDTO(studentInput));
+        eventPublisher.publishStudentCreated(created.getId(), created.getEmail());
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toModel(created));
     }
-    
-    @Override
-    public ResponseEntity<Void> deleteStudent(Long id) {
-        log.debug("Deleting student: {}", id);
-        studentService.deleteStudent(id);
-        // Publish WebSocket event
-        webSocketEventPublisher.publishStudentDeleted(id);
-        return ResponseEntity.noContent().build();
-    }
-    
-    @Override
-    public ResponseEntity<List<Student>> getAllStudents(Long batchId) {
-        log.debug("Getting all students, batchId: {}", batchId);
-        List<StudentDTO> dtos = studentService.getAllStudents(batchId);
-        return ResponseEntity.ok(apiModelMapper.toStudentModelList(dtos));
-    }
-    
-    @Override
-    public ResponseEntity<PageStudent> getAllStudentsPaged(Integer page, Integer size, String sort) {
-        log.debug("Getting paginated students, page: {}, size: {}, sort: {}", page, size, sort);
-        Pageable pageable = PageableUtil.createPageable(page, size, sort);
-        Page<StudentDTO> dtoPage = studentService.getAllStudents(pageable);
-        return ResponseEntity.ok(apiModelMapper.toPageStudent(dtoPage));
-    }
-    
-    @Override
-    public ResponseEntity<Student> getStudentById(Long id) {
-        log.debug("Getting student by id: {}", id);
-        StudentDTO dto = studentService.getStudentById(id);
-        return ResponseEntity.ok(apiModelMapper.toModel(dto));
-    }
-    
+
     @Override
     public ResponseEntity<Student> updateStudent(Long id, StudentInput studentInput) {
-        log.debug("Updating student: {}", id);
-        StudentDTO dto = apiModelMapper.toDTO(studentInput);
-        StudentDTO updated = studentService.updateStudent(id, dto);
-        // Publish WebSocket event
-        webSocketEventPublisher.publishStudentUpdated(updated.getId(), updated.getEmail());
-        return ResponseEntity.ok(apiModelMapper.toModel(updated));
+        log.debug("PUT /students/{}", id);
+        StudentDTO updated = studentService.updateStudent(id, mapper.toDTO(studentInput));
+        eventPublisher.publishStudentUpdated(updated.getId(), updated.getEmail());
+        return ResponseEntity.ok(mapper.toModel(updated));
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteStudent(Long id) {
+        log.debug("DELETE /students/{}", id);
+        studentService.deleteStudent(id);
+        eventPublisher.publishStudentDeleted(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<Student> getStudentById(Long id) {
+        log.debug("GET /students/{}", id);
+        return ResponseEntity.ok(mapper.toModel(studentService.getStudentById(id)));
+    }
+
+    @Override
+    public ResponseEntity<List<Student>> getAllStudents(Long batchId) {
+        log.debug("GET /students batchId={}", batchId);
+        return ResponseEntity.ok(mapper.toStudentModelList(studentService.getAllStudents(batchId)));
+    }
+
+    @Override
+    public ResponseEntity<PageStudent> getAllStudentsPaged(Integer page, Integer size, String sort) {
+        log.debug("GET /students/paged page={} size={}", page, size);
+        Pageable pageable = PageableUtil.createPageable(page, size, sort);
+        Page<StudentDTO> resultPage = studentService.getAllStudents(pageable);
+        return ResponseEntity.ok(mapper.toPageStudent(resultPage));
     }
 }
-

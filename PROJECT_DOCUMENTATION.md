@@ -1,211 +1,169 @@
-# Academy Backend - Complete Project Documentation
+# Academy Backend — Technical Reference
 
-## Table of Contents
+## Contents
 
-1. [High-Level Architecture](#high-level-architecture)
-2. [Low-Level Design](#low-level-design)
-3. [Database Design](#database-design)
-4. [Redis Caching Strategy](#redis-caching-strategy)
-5. [API Documentation](#api-documentation)
+1. [System Architecture](#system-architecture)
+2. [Module Design](#module-design)
+3. [Data Model](#data-model)
+4. [Caching Layer](#caching-layer)
+5. [API Contracts](#api-contracts)
 6. [Error Handling](#error-handling)
-7. [Cache Invalidation](#cache-invalidation)
-8. [Sequence Diagrams](#sequence-diagrams)
-9. [Deployment Guide](#deployment-guide)
-10. [Running with Docker](#running-with-docker)
-11. [Integration Testing Method](#integration-testing-method)
-12. [Limitations](#limitations)
-13. [Future Enhancements](#future-enhancements)
+7. [Request Flow Diagrams](#request-flow-diagrams)
+8. [Deployment](#deployment)
+9. [Running with Docker](#running-with-docker)
+10. [Integration Testing](#integration-testing)
+11. [Limitations & Roadmap](#limitations--roadmap)
 
 ---
 
-## High-Level Architecture
+## System Architecture
 
-### System Overview
+### Overview
 
-The Academy Backend is a production-ready Spring Boot application built with a multi-module architecture, implementing event-driven patterns with Kafka, Redis caching, and JWT authentication.
+The Academy Backend is a production-ready, multi-module Spring Boot application. It implements event-driven patterns via Apache Kafka, adds Redis-based caching for read performance, and secures endpoints with JWT authentication.
 
 ### Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         Client Layer                            │
-│                    (Web/Mobile Applications)                     │
+│                        Client Tier                              │
+│              (React Frontend / Mobile Applications)             │
 └────────────────────────────┬────────────────────────────────────┘
-                              │
-                              │ HTTPS/REST
-                              │
-┌─────────────────────────────▼────────────────────────────────────┐
-│                      API Gateway Layer                           │
+                             │ HTTPS / REST
+                             │
+┌────────────────────────────▼────────────────────────────────────┐
+│                      Application Tier                           │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │  Spring Security + JWT Authentication Filter              │   │
+│  │         Spring Security — JWT Authentication Filter       │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │  REST Controllers (OpenAPI Generated)                     │   │
-│  │  - StudentController                                      │   │
-│  │  - BatchController                                        │   │
-│  │  - ClassController                                        │   │
-│  │  - MentorController                                       │   │
-│  │  - MentorSessionController                                │   │
-│  │  - AuthController                                         │   │
+│  │            REST Controllers (OpenAPI Interfaces)          │   │
+│  │   StudentController · BatchController · ClassController   │   │
+│  │   MentorController · MentorSessionController · Auth       │   │
+│  │   BatchTypeController                                     │   │
 │  └──────────────────────────────────────────────────────────┘   │
-└─────────────────────────────┬────────────────────────────────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        │                     │                     │
-┌───────▼────────┐   ┌────────▼────────┐   ┌───────▼────────┐
-│  Service Layer │   │  Cache Layer    │   │  Kafka Layer   │
-│                │   │                 │   │                │
-│  - Student     │   │  Redis Cache    │   │  - Producers   │
-│  - Batch       │◄──┤  Manager         │   │  - Consumers   │
-│  - Class       │   │  (TTL-based)    │   │                │
-│  - Mentor      │   │                 │   │                │
-│  - MentorSession│  └─────────────────┘   └────────────────┘
-└───────┬────────┘
-        │
-┌───────▼────────┐
-│  Data Layer    │
-│                │
-│  - JPA Repos   │
-│  - Entities    │
-│  - Flyway      │
-└───────┬────────┘
-        │
-┌───────▼────────┐
-│  Database      │
-│  (MySQL 8.0)   │
-└────────────────┘
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+          ┌──────────────────┼──────────────────┐
+          │                  │                  │
+  ┌───────▼────────┐ ┌───────▼────────┐ ┌──────▼─────────┐
+  │  Service Layer │ │  Cache Layer   │ │  Kafka Layer   │
+  │                │ │                │ │                │
+  │  Student       │ │  Redis / TTL   │ │  Producers     │
+  │  Batch       ◄─┤ │  per entity    │ │  Consumers     │
+  │  Class         │ │                │ │                │
+  │  Mentor        │ └────────────────┘ └────────────────┘
+  │  MentorSession │
+  └───────┬────────┘
+          │
+  ┌───────▼────────┐
+  │   Data Layer   │
+  │                │
+  │  JPA Repos     │
+  │  Entities      │
+  │  Flyway        │
+  └───────┬────────┘
+          │
+  ┌───────▼────────┐
+  │   MySQL 8.0    │
+  └────────────────┘
 ```
 
 ### Technology Stack
 
-- **Java 21** - Programming language
-- **Spring Boot 3.2.0** - Application framework
-- **Spring Data JPA** - Data persistence
-- **Spring Data Redis** - Caching layer
-- **Spring Kafka** - Event-driven messaging
-- **Spring Security** - Authentication & authorization
-- **MySQL 8.0** - Relational database
-- **Redis 7** - In-memory cache
-- **Apache Kafka** - Message broker
-- **Flyway** - Database migrations
-- **MapStruct** - DTO mapping
-- **Lombok** - Boilerplate reduction
-- **OpenAPI/Swagger** - API documentation
-- **Docker & Docker Compose** - Containerization
+| Category | Technology |
+|----------|------------|
+| Language / Runtime | Java 21 |
+| Framework | Spring Boot 3.2.0 |
+| Persistence | Spring Data JPA, Hibernate, Flyway |
+| Database | MySQL 8.0 |
+| Cache | Redis 7 (Spring Cache abstraction) |
+| Messaging | Apache Kafka, Spring Kafka |
+| Security | Spring Security, JWT |
+| Mapping | MapStruct, Lombok |
+| API Docs | Springdoc OpenAPI, Swagger UI |
+| Containerization | Docker, Docker Compose |
 
-### Module Structure
+### Module Layout
 
 ```
 academy-backend/
 ├── modules/
-│   ├── academy-api/              # API layer (controllers, security, config)
-│   ├── academy-service/          # Business logic (services, mappers)
-│   ├── academy-common/           # Shared entities, DTOs, exceptions
-│   ├── academy-kafka-producer/   # Kafka event producers
-│   └── academy-kafka-consumer/   # Kafka event consumers
+│   ├── academy-api/              # Controllers, security, configuration
+│   ├── academy-service/          # Business logic, mappers, AOP aspects
+│   ├── academy-common/           # Entities, DTOs, repositories, exceptions
+│   ├── academy-kafka-producer/   # Domain event publishers
+│   └── academy-kafka-consumer/   # Audit event consumers
 ```
 
 ---
 
-## Low-Level Design
+## Module Design
 
-### Component Architecture
+### `academy-api`
 
-#### 1. API Module (`academy-api`)
-
-**Controllers:**
+**Controllers**
 - Implement OpenAPI-generated interfaces
-- Handle HTTP requests/responses
-- Delegate to service layer
-- Use generated models from OpenAPI spec
+- Receive generated request models (`*Input`); return generated response models
+- Delegate all business logic to the service layer
 
-**Security:**
-- JWT-based authentication
-- Configurable header name/prefix
-- Spring Security filter chain
-- Role-based access control (future)
+**Security**
+- JWT extraction and validation in `JwtAuthenticationFilter`
+- Configurable header name and token prefix
+- Public endpoints: `/api/auth/**`, `/swagger-ui/**`, `/api-docs/**`, `/actuator/**`
 
-**Configuration:**
-- Redis configuration with TTL
-- Kafka topic configuration
-- OpenAPI generation
-- CORS configuration
+**Configuration**
+- `RedisConfig` — serializers, TTL per cache name
+- `KafkaConfig` — topic definitions (3 partitions, RF 1)
+- `OpenApiConfig` — API info, JWT security scheme
+- `SecurityConfig` — filter chain, CORS
 
-#### 2. Service Module (`academy-service`)
+### `academy-service`
 
-**Services:**
-- Business logic implementation
-- Transaction management
-- Cache annotations (`@Cacheable`, `@CacheEvict`)
-- Distributed locking (`@WithLock`)
+**Services**
+- Transaction-scoped business logic
+- `@Cacheable` / `@CacheEvict` annotations on read/write operations
+- `@WithLock` for distributed locking on critical writes
 
-**Mappers:**
-- MapStruct-based DTO/Entity mapping
-- Explicit `@Mapping` annotations
-- Version field mapping for optimistic locking
+**MapStruct Mappers**
+- Compile-time DTO ↔ Entity conversion
+- Explicit `@Mapping` only where field names differ
 
-**Aspects:**
-- `LockAspect` - AOP for distributed locking
-- SpEL-based lock key resolution
+**AOP**
+- `LockAspect` — intercepts `@WithLock`; acquires Redis lock via `DistributedLockService`
+- SpEL expressions resolve lock keys from method arguments
 
-#### 3. Common Module (`academy-common`)
+### `academy-common`
 
-**Entities:**
-- JPA entities with optimistic locking (`@Version`)
-- Relationships (OneToMany, ManyToOne)
-- Validation annotations
+**Entities** — JPA annotations, `@Version` for optimistic locking, lazy-loaded associations
 
-**DTOs:**
-- Data transfer objects
-- Validation constraints
-- Version fields
+**DTOs** — Validation annotations (`@NotBlank`, `@NotNull`, `@Email`); version field for concurrency control
 
-**Exceptions:**
-- Custom exception hierarchy
-- Global exception handler
-- Problem Details (RFC 7807)
+**Exceptions** — Domain-specific exceptions mapped to Problem Details (RFC 7807) by `GlobalExceptionHandler`
 
-**Repositories:**
-- Spring Data JPA repositories
-- Custom query methods
-- Pessimistic locking support
+**Repositories** — Spring Data JPA; custom query methods where needed
 
-#### 4. Kafka Modules
+### Kafka Modules
 
-**Producer (`academy-kafka-producer`):**
-- Event DTOs
-- KafkaTemplate-based publishing
-- Event type definitions
+**Producer** — `KafkaTemplate`-based publishers; each domain event carries type, timestamp, and payload map
 
-**Consumer (`academy-kafka-consumer`):**
-- Kafka listeners with retry
-- Manual acknowledgment
-- Audit event persistence
+**Consumer** — `@KafkaListener` with manual acknowledgment; on success persists event to `audit_events`
 
 ### Design Patterns
 
-1. **Repository Pattern** - Data access abstraction
-2. **Service Layer Pattern** - Business logic separation
-3. **DTO Pattern** - Data transfer objects
-4. **Factory Pattern** - Object creation (mappers)
-5. **Aspect-Oriented Programming** - Cross-cutting concerns (locking, caching)
-6. **Event-Driven Architecture** - Kafka-based messaging
-7. **Strategy Pattern** - Cache TTL strategies
-8. **Template Method** - Base service methods
-
-### Key Design Decisions
-
-1. **Multi-Module Architecture**: Separation of concerns, independent deployment
-2. **OpenAPI-Driven APIs**: Single source of truth, type safety
-3. **Redis Caching**: Performance optimization with TTL-based expiration
-4. **Distributed Locking**: Prevents race conditions in concurrent scenarios
-5. **Optimistic Locking**: Database-level concurrency control
-6. **Event-Driven**: Loose coupling via Kafka events
-7. **JWT Authentication**: Stateless, scalable authentication
+| Pattern | Where Applied |
+|---------|---------------|
+| Repository | Data access via Spring Data JPA |
+| Service Layer | Business logic separated from controllers |
+| DTO | API contracts isolated from domain entities |
+| MapStruct Factory | Type-safe, compile-time object mapping |
+| AOP | Distributed locking, caching |
+| Event-Driven | Kafka messaging for loose coupling |
+| Strategy | Per-entity cache TTL configuration |
 
 ---
 
-## Database Design
+## Data Model
 
 ### Entity Relationship Diagram
 
@@ -220,570 +178,298 @@ academy-backend/
 │ id (PK)      │
 │ name (UNIQUE)│
 └──────┬───────┘
-       │
-       │ 1
-       │
-       │ Many
+       │ 1:Many
        ▼
-┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-│    Batch     │◄────────┤   Student    │─────────┤   Student    │
-├──────────────┤         ├──────────────┤         │  (Self-Ref)  │
-│ id (PK)      │    Many │ id (PK)      │   1     │ buddyId (FK) │
-│ name         │         │ name         │         └──────────────┘
-│ startMonth   │         │ email (UNIQUE)│
-│ instructor   │         │ gradYear      │
-│ batchTypeId  │         │ university    │
-│ version      │         │ phone         │
+┌──────────────┐         ┌──────────────┐
+│    Batch     │◄── Many─┤   Student    │──── Self-Ref (buddyId)
+├──────────────┤         ├──────────────┤
+│ id (PK)      │         │ id (PK)      │
+│ name         │         │ name         │
+│ startMonth   │         │ email (UNIQ) │
+│ instructor   │         │ gradYear     │
+│ batchTypeId  │         │ university   │
+│ version      │         │ phone        │
 └──────┬───────┘         │ batchId (FK) │
        │                 │ buddyId (FK) │
-       │ Many            │ version      │
-       │                 └──────┬───────┘
-       │                        │
-       │                        │ Many
-       │                        │
-       │ Many                   ▼
-       │                 ┌──────────────────┐
-       │                 │ MentorSession    │
-       │                 ├──────────────────┤
-       │                 │ id (PK)         │
-       │                 │ time            │
-       │                 │ durationMinutes  │
-       │                 │ studentId (FK)  │
-       │                 │ mentorId (FK)   │
-       │                 │ studentRating   │
-       │                 │ mentorRating    │
-       │                 │ version         │
-       │                 └────────┬─────────┘
-       │                          │
-       │                          │ Many
-       │                          │
-       │                          │ 1
-       │                          ▼
-       │                 ┌──────────────┐
-       │                 │   Mentor     │
-       │                 ├──────────────┤
-       │                 │ id (PK)      │
-       │                 │ name         │
-       │                 │ company      │
-       │                 └──────────────┘
-       │
-       │ Many
-       │
-       ▼
-┌──────────────┐
-│    Class     │
-├──────────────┤
-│ id (PK)      │
-│ name         │
-│ date         │
-│ time         │
-│ instructor   │
-└──────────────┘
-       ▲
-       │
-       │ Many (via batches_classes join table)
-       │
-       │
-┌──────────────┐
-│    Batch     │
-└──────────────┘
+       │ Many:Many       │ version      │
+       ▼                 └──────┬───────┘
+┌──────────────┐                │ 1:Many
+│    Class     │                ▼
+├──────────────┤         ┌──────────────────┐
+│ id (PK)      │         │  MentorSession   │
+│ name         │         ├──────────────────┤
+│ date         │         │ id (PK)          │
+│ time         │         │ time             │
+│ instructor   │         │ durationMinutes  │
+└──────────────┘         │ studentId (FK)   │
+(via batches_classes)    │ mentorId (FK)    │
+                         │ studentRating    │
+                         │ mentorRating     │
+                         │ version          │
+                         └────────┬─────────┘
+                                  │ Many:1
+                                  ▼
+                         ┌──────────────┐
+                         │    Mentor    │
+                         ├──────────────┤
+                         │ id (PK)      │
+                         │ name         │
+                         │ company      │
+                         └──────────────┘
 
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         AUDIT & HISTORY TABLES                           │
-└─────────────────────────────────────────────────────────────────────────┘
-
-┌──────────────────┐         ┌──────────────────────────┐
-│  AuditEvent      │         │ StudentBatchHistory       │
-├──────────────────┤         ├──────────────────────────┤
-│ id (PK)          │         │ id (PK)                  │
-│ eventType        │         │ studentId (FK)           │
-│ payload (TEXT)   │         │ batchId (FK)             │
-│ createdAt        │         │ shiftDate                │
-└──────────────────┘         └──────────────────────────┘
-(Kafka Consumer)              (Historical tracking)
-
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         RELATIONSHIP SUMMARY                              │
-├─────────────────────────────────────────────────────────────────────────┤
-│ BatchType  ──(1:Many)──> Batch                                         │
-│ Batch      ──(1:Many)──> Student                                       │
-│ Student    ──(Many:1)──> Batch                                         │
-│ Student    ──(Self-Ref)──> Student (buddyId)                            │
-│ Batch      ──(Many:Many)──> Class (via batches_classes)                 │
-│ Student    ──(1:Many)──> MentorSession                                  │
-│ Mentor     ──(1:Many)──> MentorSession                                 │
-│ Student    ──(1:Many)──> StudentBatchHistory                            │
-│ Batch      ──(1:Many)──> StudentBatchHistory                            │
-└─────────────────────────────────────────────────────────────────────────┘
+┌──────────────────┐     ┌──────────────────────────┐
+│  AuditEvent      │     │  StudentBatchHistory      │
+├──────────────────┤     ├──────────────────────────┤
+│ id (PK)          │     │ id (PK)                  │
+│ eventType        │     │ studentId (FK)            │
+│ payload (TEXT)   │     │ batchId (FK)             │
+│ createdAt        │     │ shiftDate                 │
+└──────────────────┘     └──────────────────────────┘
 ```
 
-### Database Schema
+### Table Definitions
 
-#### Tables
+#### `batch_types`
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | BIGINT | PK, AUTO_INCREMENT |
+| name | VARCHAR(255) | NOT NULL |
+| description | TEXT | |
 
-1. **batch_types**
-   - `id` (BIGINT, PK, AUTO_INCREMENT)
-   - `name` (VARCHAR(255), NOT NULL)
-   - `description` (TEXT)
+#### `batches`
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | BIGINT | PK, AUTO_INCREMENT |
+| name | VARCHAR(255) | NOT NULL |
+| start_month | DATE | |
+| current_instructor | VARCHAR(255) | |
+| batch_type_id | BIGINT | FK → batch_types.id |
+| version | INT | Optimistic locking |
 
-2. **batches**
-   - `id` (BIGINT, PK, AUTO_INCREMENT)
-   - `name` (VARCHAR(255), NOT NULL)
-   - `start_month` (DATE)
-   - `current_instructor` (VARCHAR(255))
-   - `batch_type_id` (BIGINT, FK → batch_types.id)
-   - `version` (INT, for optimistic locking)
+#### `students`
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | BIGINT | PK, AUTO_INCREMENT |
+| name | VARCHAR(255) | NOT NULL |
+| email | VARCHAR(255) | UNIQUE, NOT NULL |
+| graduation_year | INT | |
+| university_name | VARCHAR(255) | |
+| phone_number | VARCHAR(50) | |
+| batch_id | BIGINT | FK → batches.id, NULLABLE |
+| buddy_id | BIGINT | FK → students.id, NULLABLE |
+| version | INT | Optimistic locking |
 
-3. **students**
-   - `id` (BIGINT, PK, AUTO_INCREMENT)
-   - `name` (VARCHAR(255), NOT NULL)
-   - `email` (VARCHAR(255), UNIQUE, NOT NULL)
-   - `graduation_year` (INT)
-   - `university_name` (VARCHAR(255))
-   - `phone_number` (VARCHAR(50))
-   - `batch_id` (BIGINT, FK → batches.id, NULLABLE)
-   - `buddy_id` (BIGINT, FK → students.id, NULLABLE)
-   - `version` (INT, for optimistic locking)
+#### `classes`
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | BIGINT | PK, AUTO_INCREMENT |
+| name | VARCHAR(255) | NOT NULL |
+| date | DATE | NOT NULL |
+| time | TIME | NOT NULL |
+| instructor | VARCHAR(255) | NOT NULL |
 
-4. **classes**
-   - `id` (BIGINT, PK, AUTO_INCREMENT)
-   - `name` (VARCHAR(255), NOT NULL)
-   - `date` (DATE, NOT NULL)
-   - `time` (TIME, NOT NULL)
-   - `instructor` (VARCHAR(255), NOT NULL)
+#### `mentors`
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | BIGINT | PK, AUTO_INCREMENT |
+| name | VARCHAR(255) | NOT NULL |
+| current_company | VARCHAR(255) | |
 
-5. **mentors**
-   - `id` (BIGINT, PK, AUTO_INCREMENT)
-   - `name` (VARCHAR(255), NOT NULL)
-   - `current_company` (VARCHAR(255))
+#### `mentor_sessions`
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | BIGINT | PK, AUTO_INCREMENT |
+| time | DATETIME | NOT NULL |
+| duration_minutes | INT | NOT NULL |
+| student_id | BIGINT | FK → students.id, NOT NULL |
+| mentor_id | BIGINT | FK → mentors.id, NOT NULL |
+| student_rating | INT | 1–5, NULLABLE |
+| mentor_rating | INT | 1–5, NULLABLE |
+| version | INT | Optimistic locking |
 
-6. **mentor_sessions**
-   - `id` (BIGINT, PK, AUTO_INCREMENT)
-   - `time` (DATETIME, NOT NULL)
-   - `duration_minutes` (INT, NOT NULL)
-   - `student_id` (BIGINT, FK → students.id, NOT NULL)
-   - `mentor_id` (BIGINT, FK → mentors.id, NOT NULL)
-   - `student_rating` (INT, 1-5)
-   - `mentor_rating` (INT, 1-5)
-   - `version` (INT, for optimistic locking)
+#### `batch_classes` (Join Table)
+| Column | Type | Constraints |
+|--------|------|-------------|
+| batch_id | BIGINT | FK → batches.id |
+| class_id | BIGINT | FK → classes.id |
 
-7. **batch_classes** (Join Table - Many-to-Many)
-   - `batch_id` (BIGINT, FK → batches.id)
-   - `class_id` (BIGINT, FK → classes.id)
-   - Primary Key: (batch_id, class_id)
+Composite primary key: `(batch_id, class_id)`
 
-8. **audit_events** (Kafka Consumer - Event Storage)
-   - `id` (BIGINT, PK, AUTO_INCREMENT)
-   - `event_type` (VARCHAR(255), NOT NULL)
-   - `payload` (TEXT, JSON)
-   - `created_at` (TIMESTAMP, NOT NULL)
+#### `audit_events`
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | BIGINT | PK, AUTO_INCREMENT |
+| event_type | VARCHAR(255) | NOT NULL |
+| payload | TEXT | JSON |
+| created_at | TIMESTAMP | NOT NULL |
 
-9. **student_batch_history** (Historical Tracking)
-   - `id` (BIGINT, PK, AUTO_INCREMENT)
-   - `student_id` (BIGINT, FK → students.id, NOT NULL)
-   - `batch_id` (BIGINT, FK → batches.id, NOT NULL)
-   - `shift_date` (DATE, NOT NULL)
+#### `student_batch_history`
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | BIGINT | PK, AUTO_INCREMENT |
+| student_id | BIGINT | FK → students.id, NOT NULL |
+| batch_id | BIGINT | FK → batches.id, NOT NULL |
+| shift_date | DATE | NOT NULL |
 
 ### Indexes
 
-**Primary Keys:**
-- All tables have `id` as PRIMARY KEY with AUTO_INCREMENT
+**Unique:** `students.email`, `batch_types.name`
 
-**Unique Indexes:**
-- `students.email` - UNIQUE constraint
-- `batch_type.name` - UNIQUE constraint
+**Foreign Keys (all indexed):** `batches.batch_type_id`, `students.batch_id`, `students.buddy_id`, `mentor_sessions.student_id`, `mentor_sessions.mentor_id`, `student_batch_history.student_id`, `student_batch_history.batch_id`
 
-**Foreign Key Indexes:**
-- `batches.batch_type_id` - FK to `batch_type.id`
-- `students.batch_id` - FK to `batches.id`
-- `students.buddy_id` - FK to `students.id` (self-reference)
-- `mentor_sessions.student_id` - FK to `students.id`
-- `mentor_sessions.mentor_id` - FK to `mentors.id`
-- `student_batch_history.student_id` - FK to `students.id`
-- `student_batch_history.batch_id` - FK to `batches.id`
+**Composite:** `batch_classes(batch_id, class_id)` — composite PK
 
-**Composite Indexes:**
-- `batch_classes(batch_id, class_id)` - Composite primary key
+### Flyway Migrations
 
-### Migrations
-
-Flyway manages database schema:
-- `V1__init.sql` - Initial schema and sample data
-- `V2__add_version_columns.sql` - Optimistic locking support
+- `V1__init.sql` — full schema creation and seed data
+- `V2__add_version_columns.sql` — adds `version` columns for optimistic locking
 
 ---
 
-## Redis Caching Strategy
+## Caching Layer
 
-### Current Implementation
+### Implementation
 
-The project uses **Spring Cache abstraction** with Redis as the backing store. While the master prompt suggests custom caching, the current implementation uses `@Cacheable` and `@CacheEvict` annotations for simplicity and maintainability.
+Spring Cache abstraction with Redis as the backend. Configured in `RedisConfig` with:
+- JSON serialization via Jackson
+- String key serialization
+- Null value prevention (`disableCachingNullValues()`)
+- Per-cache TTL through `RedisCacheConfiguration`
 
-### Cache Configuration
+### TTL Strategy
 
-**Location:** `modules/academy-api/src/main/java/com/academy/config/RedisConfig.java`
+| Cache Name | TTL | Reason |
+|------------|-----|--------|
+| `mentorSession`, `mentorSessions` | 10 minutes | High-frequency changes |
+| `mentor`, `mentors`, `batchType`, `batchTypes` | 1 hour | Stable reference data |
+| `student`, `students`, `batch`, `batches`, `class`, `classes` | 30 minutes | Standard transactional data |
 
-**Key Features:**
-- JSON serialization for cache values
-- String serialization for keys
-- TTL-based expiration
-- Null value prevention
-- Per-cache TTL configuration
+### Key Naming
 
-### Cache Key Naming
-
-**Current Pattern (Spring Cache):**
+Spring Cache default pattern:
 ```
 {cacheName}::{keyExpression}
 ```
 
-**Examples:**
-- `student::student:1` - Individual student cache
-- `students::batch:1` - Students by batch
-- `students::all` - All students
-- `batch::batch:1` - Individual batch cache
-
-**Recommended Pattern (for custom implementation):**
+Examples:
 ```
-APP:{MODULE}:{ENTITY}:{ID}
+student::student:1          → individual student
+students::all               → full student list
+students::batch:1           → students in batch #1
+batch::batch:1              → individual batch
+mentorSession::mentorSession:1
 ```
 
-**Examples:**
-- `APP:ACADEMY:STUDENT:101`
-- `APP:ACADEMY:STUDENT:LIST:BATCH:1`
-- `APP:ACADEMY:BATCH:5`
+### Cache Operations
 
-### TTL Strategy
+**Read operations (`@Cacheable`):**
+- Cached: non-null, non-empty GET responses
+- Not cached: null values, empty collections
 
-**Default TTL:** 30 minutes
-
-**Cache-Specific TTLs:**
-
-| Cache Name | TTL | Reason |
-|------------|-----|--------|
-| `mentorSessions`, `mentorSession` | 10 minutes | Frequently changing data |
-| `mentors`, `mentor`, `batchTypes`, `batchType` | 1 hour | Stable reference data |
-| `students`, `student`, `batches`, `batch`, `classes`, `class` | 30 minutes | Default for transactional data |
-
-### Caching Rules
-
-**What Gets Cached:**
-- ✅ GET operations (read-only)
-- ✅ Non-null results
-- ✅ Non-empty collections
-- ✅ Successful responses
-
-**What Doesn't Get Cached:**
-- ❌ POST/PUT/DELETE responses
-- ❌ Null values
-- ❌ Empty collections (via `unless` condition)
-- ❌ Error responses
-
-### Cache Invalidation
-
-**Automatic Invalidation:**
-- `@CacheEvict` on create/update/delete operations
-- Pattern-based eviction (e.g., `allEntries = true`)
-
-**Current Implementation:**
+**Write operations (`@CacheEvict`):**
 ```java
+// On create — evict all entries in related caches
 @CacheEvict(value = {"student", "students"}, allEntries = true)
-public StudentDTO createStudent(StudentDTO dto) { ... }
 
+// On update / delete — evict specific entry and all list caches
 @CacheEvict(value = {"student", "students"}, key = "'student:' + #id", allEntries = true)
-public StudentDTO updateStudent(Long id, StudentDTO dto) { ... }
 ```
 
-**Recommended Custom Implementation:**
-```java
-public void invalidateStudent(Long id) {
-    // Delete specific key
-    redisTemplate.delete("APP:ACADEMY:STUDENT:" + id);
-    // Delete list keys
-    redisTemplate.delete("APP:ACADEMY:STUDENT:LIST:*");
-}
-```
+### Monitoring
 
-### Redis Connection Pooling
-
-**Lettuce Configuration:**
-```yaml
-spring:
-  redis:
-    lettuce:
-      pool:
-        max-active: 8
-        max-idle: 8
-        min-idle: 0
-```
-
-### Cache Validation
-
-**Current:** Spring Cache handles null prevention via `disableCachingNullValues()`
-
-**Recommended Custom Validator:**
-```java
-public class RedisValueValidator {
-    public static boolean isCacheable(Object result) {
-        if (result == null) return false;
-        if (result instanceof Collection && ((Collection<?>) result).isEmpty()) return false;
-        if (result instanceof Exception) return false;
-        return true;
-    }
-}
-```
-
-### Cache Monitoring
-
-**Actuator Endpoints:**
-- `/actuator/health` - Redis connection health
-- `/actuator/metrics` - Cache metrics (if enabled)
-
-**Redis CLI Commands:**
 ```bash
-# Check cache keys
 docker exec -it academy-redis redis-cli KEYS "*student*"
-
-# Check TTL
 docker exec -it academy-redis redis-cli TTL "student::student:1"
-
-# Monitor commands
 docker exec -it academy-redis redis-cli MONITOR
 ```
 
+Spring Actuator endpoints:
+- `/actuator/health` — Redis connectivity status
+- `/actuator/metrics` — cache statistics
+
 ---
 
-## API Documentation
+## API Contracts
 
 ### Base URL
 
-- **Local:** `http://localhost:8080`
-- **Docker:** `http://localhost:8080`
+`http://localhost:8080` (local and Docker)
 
 ### Authentication
 
-All APIs (except `/api/auth/**`) require JWT authentication.
+Header: `Authorization: Bearer <jwt-token>`
 
-**Header Format:**
+**Login:**
 ```
-Authorization: Bearer <jwt-token>
-```
+POST /api/auth/login
+{"username": "admin@academy.com", "password": "password123"}
 
-**Configurable:**
-- Header name: `jwt.header.name` (default: `Authorization`)
-- Header prefix: `jwt.header.prefix` (default: `Bearer `)
-
-### Authentication APIs
-
-#### 1. Login
-
-**POST** `/api/auth/login`
-
-**Request:**
-```json
-{
-  "username": "admin@academy.com",
-  "password": "password123"
-}
+→ {"token": "eyJ...", "type": "Bearer"}
 ```
 
-**Response (200):**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "type": "Bearer"
-}
+**Validate:**
+```
+POST /api/auth/validate
+{"token": "eyJ..."}
+
+→ {"valid": true, "username": "admin@academy.com"}
 ```
 
-#### 2. Validate Token
+### Students
 
-**POST** `/api/auth/validate`
+| Method | Path | Description | Cache |
+|--------|------|-------------|-------|
+| GET | `/api/students` | List (optional `?batchId=`) | students::all / students::batch:{id} |
+| GET | `/api/students/paged` | Paginated list | — |
+| GET | `/api/students/{id}` | By ID | student::student:{id} |
+| POST | `/api/students` | Create | evicts student+students |
+| PUT | `/api/students/{id}` | Update | evicts student+students |
+| DELETE | `/api/students/{id}` | Delete | evicts student+students |
 
-**Request:**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
+Kafka: `student.registered` on POST
 
-**Response (200):**
-```json
-{
-  "valid": true,
-  "username": "admin@academy.com"
-}
-```
+### Batches
 
-### Student APIs
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/batches` | Paginated list |
+| GET | `/api/batches/{id}` | By ID |
+| POST | `/api/batches` | Create (Kafka: `batch.created`) |
+| PUT | `/api/batches/{id}` | Update |
+| DELETE | `/api/batches/{id}` | Delete |
+| POST | `/api/batches/{id}/classes/{classId}` | Assign class |
 
-#### 1. Get All Students
+### Classes
 
-**GET** `/api/students?batchId={id}`
+`GET /api/classes` · `GET /api/classes/{id}` · `POST /api/classes` · `PUT /api/classes/{id}` · `DELETE /api/classes/{id}`
 
-**Query Parameters:**
-- `batchId` (optional) - Filter by batch ID
+### Batch Types
 
-**Response (200):**
-```json
-[
-  {
-    "id": 1,
-    "name": "Alice Smith",
-    "email": "alice@example.com",
-    "graduationYear": 2023,
-    "universityName": "State University",
-    "phoneNumber": "123-456-7890",
-    "batchId": 1,
-    "buddyId": null
-  }
-]
-```
+| Method | Path | Description | Cache |
+|--------|------|-------------|-------|
+| GET | `/api/batch-types` | List all batch types | batchTypes::all (1 hour) |
+| GET | `/api/batch-types/{id}` | By ID | batchType::batchType:{id} (1 hour) |
+| POST | `/api/batch-types` | Create | evicts batchType+batchTypes |
+| PUT | `/api/batch-types/{id}` | Update | evicts batchType+batchTypes |
+| DELETE | `/api/batch-types/{id}` | Delete | evicts batchType+batchTypes |
 
-**Caching:** ✅ Cached with key `students::batch:{id}` or `students::all`
+### Mentors
 
-#### 2. Get All Students (Paginated)
+`GET /api/mentors` · `GET /api/mentors/{id}` · `POST /api/mentors` · `PUT /api/mentors/{id}` · `DELETE /api/mentors/{id}`
 
-**GET** `/api/students/paged?page=0&size=20&sort=name,asc`
+Cache TTL: 1 hour
 
-**Response (200):**
-```json
-{
-  "content": [...],
-  "totalElements": 100,
-  "totalPages": 5,
-  "size": 20,
-  "number": 0,
-  "first": true,
-  "last": false
-}
-```
+### Mentor Sessions
 
-#### 3. Get Student by ID
+`GET /api/mentor-sessions` · `GET /api/mentor-sessions/{id}` · `POST /api/mentor-sessions` · `PUT /api/mentor-sessions/{id}` · `DELETE /api/mentor-sessions/{id}`
 
-**GET** `/api/students/{id}`
+Kafka: `mentor.session.created` on POST · Cache TTL: 10 minutes
 
-**Response (200):**
-```json
-{
-  "id": 1,
-  "name": "Alice Smith",
-  "email": "alice@example.com",
-  ...
-}
-```
-
-**Caching:** ✅ Cached with key `student::student:{id}`
-
-#### 4. Create Student
-
-**POST** `/api/students`
-
-**Request:**
-```json
-{
-  "name": "Alice Smith",
-  "email": "alice@example.com",
-  "graduationYear": 2023,
-  "universityName": "State University",
-  "phoneNumber": "123-456-7890",
-  "batchId": 1
-}
-```
-
-**Response (201):**
-```json
-{
-  "id": 1,
-  "name": "Alice Smith",
-  ...
-}
-```
-
-**Kafka Event:** Publishes `student.registered` event
-
-**Cache Invalidation:** ✅ Evicts `student` and `students` caches
-
-#### 5. Update Student
-
-**PUT** `/api/students/{id}`
-
-**Request:** Same as create
-
-**Response (200):** Updated student object
-
-**Cache Invalidation:** ✅ Evicts specific student and list caches
-
-#### 6. Delete Student
-
-**DELETE** `/api/students/{id}`
-
-**Response (204):** No content
-
-**Cache Invalidation:** ✅ Evicts caches
-
-### Batch APIs
-
-#### 1. Get All Batches (Paginated)
-
-**GET** `/api/batches?page=0&size=20`
-
-**Caching:** ✅ Cached
-
-#### 2. Get Batch by ID
-
-**GET** `/api/batches/{id}`
-
-**Caching:** ✅ Cached
-
-#### 3. Create Batch
-
-**POST** `/api/batches`
-
-**Kafka Event:** Publishes `batch.created` event
-
-#### 4. Update Batch
-
-**PUT** `/api/batches/{id}`
-
-#### 5. Delete Batch
-
-**DELETE** `/api/batches/{id}`
-
-#### 6. Assign Class to Batch
-
-**POST** `/api/batches/{id}/classes/{classId}`
-
-### Class APIs
-
-- **GET** `/api/classes` - Get all classes
-- **GET** `/api/classes/{id}` - Get class by ID
-- **POST** `/api/classes` - Create class
-- **PUT** `/api/classes/{id}` - Update class
-- **DELETE** `/api/classes/{id}` - Delete class
-
-### Mentor APIs
-
-- **GET** `/api/mentors` - Get all mentors
-- **GET** `/api/mentors/{id}` - Get mentor by ID
-- **POST** `/api/mentors` - Create mentor
-- **PUT** `/api/mentors/{id}` - Update mentor
-- **DELETE** `/api/mentors/{id}` - Delete mentor
-
-### Mentor Session APIs
-
-- **GET** `/api/mentor-sessions` - Get all sessions
-- **GET** `/api/mentor-sessions/{id}` - Get session by ID
-- **POST** `/api/mentor-sessions` - Create session (publishes Kafka event)
-- **PUT** `/api/mentor-sessions/{id}` - Update session
-- **DELETE** `/api/mentor-sessions/{id}` - Delete session
-
-### Error Responses
-
-All errors follow RFC 7807 Problem Details format:
+### Error Response Format (RFC 7807)
 
 ```json
 {
-  "type": "about:blank",
+  "type": "uri://academy-backend/errors/student-not-found",
   "title": "Student Not Found",
   "status": 404,
   "detail": "Student with id 999 not found",
@@ -798,123 +484,29 @@ All errors follow RFC 7807 Problem Details format:
 ### Exception Hierarchy
 
 ```
-Exception
-├── RuntimeException
-    ├── StudentNotFoundException
-    ├── BatchNotFoundException
-    ├── ClassNotFoundException
-    ├── MentorNotFoundException
-    ├── MentorSessionNotFoundException
-    ├── BatchTypeNotFoundException
-    ├── LockAcquisitionException
-    └── OptimisticLockException
+RuntimeException
+├── StudentNotFoundException
+├── BatchNotFoundException
+├── ClassNotFoundException
+├── MentorNotFoundException
+├── MentorSessionNotFoundException
+├── BatchTypeNotFoundException
+├── LockAcquisitionException
+└── OptimisticLockException
 ```
 
-### Global Exception Handler
+### GlobalExceptionHandler
 
-**Location:** `modules/academy-common/src/main/java/com/academy/exception/GlobalExceptionHandler.java`
-
-**Features:**
-- Converts exceptions to Problem Details (RFC 7807)
-- Logs errors with context
-- Provides consistent error responses
-- Handles validation errors
-
-### Error Response Format
-
-```json
-{
-  "type": "uri://academy-backend/errors/student-not-found",
-  "title": "Student Not Found",
-  "status": 404,
-  "detail": "Student with id 999 not found",
-  "instance": "/api/students/999"
-}
-```
-
-### Cache Error Handling
-
-**Current:** Errors are never cached (Spring Cache handles this)
-
-**Custom Implementation:**
-```java
-try {
-    Object result = service.getData();
-    if (RedisValueValidator.isCacheable(result)) {
-        cacheService.put(key, result, ttl);
-    }
-} catch (Exception e) {
-    // Never cache errors
-    throw e;
-}
-```
+Converts all domain exceptions and validation errors into consistent RFC 7807 Problem Details responses. Validation failures return field-level error messages.
 
 ---
 
-## Cache Invalidation
+## Request Flow Diagrams
 
-### Current Strategy
-
-**Automatic Invalidation via `@CacheEvict`:**
-
-1. **Create Operations:**
-   ```java
-   @CacheEvict(value = {"student", "students"}, allEntries = true)
-   ```
-
-2. **Update Operations:**
-   ```java
-   @CacheEvict(value = {"student", "students"}, key = "'student:' + #id", allEntries = true)
-   ```
-
-3. **Delete Operations:**
-   ```java
-   @CacheEvict(value = {"student", "students"}, key = "'student:' + #id", allEntries = true)
-   ```
-
-### Invalidation Patterns
-
-**Specific Key:**
-- `student::student:1` - Single entity cache
-
-**Pattern-Based:**
-- `students::*` - All list caches
-- `student::*` - All entity caches
-
-### Recommended Custom Implementation
-
-```java
-@Service
-public class CacheInvalidationService {
-    
-    public void invalidateStudent(Long id) {
-        // Delete specific entity
-        redisTemplate.delete("APP:ACADEMY:STUDENT:" + id);
-        
-        // Delete all list caches
-        Set<String> keys = redisTemplate.keys("APP:ACADEMY:STUDENT:LIST:*");
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
-        }
-    }
-    
-    public void invalidateAllStudents() {
-        Set<String> keys = redisTemplate.keys("APP:ACADEMY:STUDENT:*");
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
-        }
-    }
-}
-```
-
----
-
-## Sequence Diagrams
-
-### Student Creation Flow
+### Student Creation
 
 ```plantuml
-@startuml Student Creation
+@startuml
 actor Client
 participant Controller
 participant Service
@@ -926,37 +518,28 @@ participant KafkaProducer
 participant CacheManager
 
 Client -> Controller: POST /api/students
-Controller -> Service: createStudent(dto)
+Controller -> Service: createStudent(request)
 Service -> LockAspect: @WithLock intercept
 LockAspect -> DistributedLockService: acquireLock("student:onboarding:email")
 DistributedLockService -> Redis: SET lock key
 Redis --> DistributedLockService: Lock acquired
-DistributedLockService --> LockAspect: LockHandle
 LockAspect -> Service: proceed()
 Service -> Repository: findByEmail(email)
 Repository -> Database: SELECT
-Database --> Repository: Result
-Repository --> Service: Optional<Student>
 Service -> Repository: save(student)
 Repository -> Database: INSERT
-Database --> Repository: Saved Student
-Repository --> Service: Student
 Service -> KafkaProducer: publishStudentRegisteredEvent()
-KafkaProducer -> Kafka: Send event
-Service -> CacheManager: @CacheEvict (invalidate)
+Service -> CacheManager: @CacheEvict
 CacheManager -> Redis: DELETE cache keys
-Service --> LockAspect: StudentDTO
 LockAspect -> DistributedLockService: releaseLock()
-DistributedLockService -> Redis: DELETE lock key
-LockAspect --> Controller: StudentDTO
 Controller --> Client: 201 Created + StudentDTO
 @enduml
 ```
 
-### Student Retrieval with Cache
+### Student Read with Cache
 
 ```plantuml
-@startuml Student Retrieval Cached
+@startuml
 actor Client
 participant Controller
 participant Service
@@ -967,25 +550,20 @@ participant Database
 
 Client -> Controller: GET /api/students/1
 Controller -> Service: getStudentById(1)
-Service -> CacheManager: @Cacheable("student", key="student:1")
+Service -> CacheManager: @Cacheable("student")
 CacheManager -> Redis: GET student::student:1
+
 alt Cache Hit
-    Redis --> CacheManager: StudentDTO (cached)
-    CacheManager --> Service: StudentDTO
-    Service --> Controller: StudentDTO
+    Redis --> CacheManager: StudentDTO
+    CacheManager --> Controller: StudentDTO
     Controller --> Client: 200 OK
 else Cache Miss
     Redis --> CacheManager: null
     CacheManager -> Service: proceed()
     Service -> Repository: findById(1)
     Repository -> Database: SELECT
-    Database --> Repository: Student
-    Repository --> Service: Student
-    Service -> Service: toDTO(student)
     Service --> CacheManager: StudentDTO
-    CacheManager -> Redis: SET student::student:1 (TTL: 30min)
-    CacheManager --> Service: StudentDTO
-    Service --> Controller: StudentDTO
+    CacheManager -> Redis: SET student::student:1 (TTL 30 min)
     Controller --> Client: 200 OK
 end
 @enduml
@@ -994,42 +572,36 @@ end
 ### Kafka Event Processing
 
 ```plantuml
-@startuml Kafka Event Processing
+@startuml
 participant Service
 participant KafkaProducer
 participant Kafka
-participant KafkaConsumer
 participant EventConsumer
 participant AuditRepository
 participant Database
 
 Service -> KafkaProducer: publishStudentRegisteredEvent(student)
-KafkaProducer -> Kafka: Send to topic "student.registered"
-Kafka --> KafkaConsumer: Consume event
-KafkaConsumer -> EventConsumer: consumeStudentRegistered(event)
+KafkaProducer -> Kafka: Send to "student.registered"
+Kafka --> EventConsumer: Deliver event
 EventConsumer -> AuditRepository: save(auditEvent)
 AuditRepository -> Database: INSERT audit_events
-Database --> AuditRepository: Saved
-AuditRepository --> EventConsumer: AuditEvent
-EventConsumer -> KafkaConsumer: acknowledge()
+EventConsumer -> Kafka: acknowledge()
 @enduml
 ```
 
 ---
 
-## Deployment Guide
+## Deployment
 
 ### Prerequisites
 
 - Docker & Docker Compose
-- Java 21+ (for local development)
-- MySQL 8.0+ (if not using Docker)
-- Redis 7+ (if not using Docker)
-- Kafka (if not using Docker)
+- Java 21+ (for local dev)
+- MySQL 8.0+ (if not Docker)
+- Redis 7+ (if not Docker)
 
 ### Environment Variables
 
-**Application:**
 ```bash
 SPRING_PROFILES_ACTIVE=docker
 SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/academy_db
@@ -1042,218 +614,106 @@ JWT_SECRET=your-secret-key-here
 JWT_EXPIRATION=86400000
 ```
 
-### Production Deployment
+### Build and Deploy
 
-1. **Build Application:**
-   ```bash
-   ./gradlew clean build -x test
-   ```
+```bash
+# Build
+./gradlew clean build -x test
 
-2. **Build Docker Image:**
-   ```bash
-   docker build -t academy-backend:latest .
-   ```
+# Docker image
+docker build -t academy-backend:latest .
 
-3. **Deploy with Docker Compose:**
-   ```bash
-   docker-compose up -d
-   ```
+# Start full stack
+docker-compose -f docker-compose.infrastructure.yml up -d
 
-4. **Verify Health:**
-   ```bash
-   curl http://localhost:8080/actuator/health
-   ```
+# Verify
+curl http://localhost:8080/actuator/health
+```
 
-### Kubernetes Deployment (Future)
+### Kubernetes (Future)
 
-- Create ConfigMaps for configuration
-- Create Secrets for sensitive data
-- Deploy Redis, MySQL, Kafka as StatefulSets
-- Deploy application as Deployment
-- Use Ingress for external access
+Deploy MySQL and Kafka as StatefulSets, use ConfigMaps/Secrets for configuration, and expose via Ingress.
 
 ---
 
 ## Running with Docker
 
-### Quick Start
-
 ```bash
-# Start all services
+# Start everything
 docker-compose up --build
 
-# Start in background
+# Background mode
 docker-compose up -d
 
-# View logs
+# Tail logs
 docker-compose logs -f academy-backend
 
-# Stop all services
+# Stop
 docker-compose down
 
-# Stop and remove volumes
+# Wipe volumes
 docker-compose down -v
 ```
 
-### Service URLs
+### Running Services
 
-- **Application:** http://localhost:8080
-- **Swagger UI:** http://localhost:8080/swagger-ui.html
-- **Health Check:** http://localhost:8080/actuator/health
-- **MySQL:** localhost:3306
-- **Redis:** localhost:6379
-- **Kafka:** localhost:9092
-
-### Docker Services
-
-1. **academy-backend** - Main application
-2. **academy-mysql** - MySQL database
-3. **academy-redis** - Redis cache
-4. **academy-kafka** - Kafka broker
-5. **academy-zookeeper** - Zookeeper for Kafka
-6. **academy-kafka-consumer** - Event consumer service
+| Container | Purpose | Port |
+|-----------|---------|------|
+| academy-backend | Main API | 8080 |
+| academy-mysql | Database | 3306 |
+| academy-redis | Cache | 6379 |
+| academy-kafka | Event broker | 9092 |
+| academy-zookeeper | Kafka coordination | 2181 |
+| academy-kafka-consumer | Audit consumer | — |
 
 ---
 
-## Integration Testing Method
+## Integration Testing
 
-### Testcontainers Setup
-
-**Location:** `src/test/java/com/academy/integration/`
-
-**Features:**
-- MySQL container
-- Redis container
-- Kafka container
-- Automatic cleanup
-
-### Running Tests
+Tests use Testcontainers to spin up real MySQL, Redis, and Kafka instances — no mocks for infrastructure.
 
 ```bash
-# All tests
-./gradlew test
-
-# Integration tests only
-./gradlew test --tests "*Integration*"
-
-# Unit tests only
-./gradlew test --tests "*Test" --exclude-tests "*Integration*"
+./gradlew test                                        # all tests
+./gradlew test --tests "*Integration*"                # integration only
+./gradlew test --tests "*Test" --exclude-tests "*Integration*"  # unit only
 ```
 
-### Test Coverage
-
-- Unit tests for services
-- Integration tests for APIs
-- Repository tests
-- Cache tests (TTL, invalidation)
-- Kafka producer/consumer tests
+Coverage targets: service layer > 80%; all API endpoints; Kafka produce/consume round-trip.
 
 ---
 
-## Limitations
+## Limitations & Roadmap
 
 ### Current Limitations
 
-1. **Caching Implementation:**
-   - Uses Spring Cache annotations instead of custom caching
-   - Key naming doesn't follow `APP:MODULE:ENTITY:ID` pattern
-   - No explicit cache validator utility
+| Area | Limitation |
+|------|-----------|
+| Authentication | No OAuth2 / RBAC / refresh tokens |
+| Caching | Single Redis node; no cluster |
+| Search | No full-text search |
+| Monitoring | No distributed tracing |
+| Security | JWT secret in config; no rate limiting |
 
-2. **Authentication:**
-   - In-memory user store (not database-backed)
-   - No role-based access control (RBAC)
-   - No refresh token mechanism
+### Roadmap
 
-3. **Monitoring:**
-   - Limited cache metrics
-   - No distributed tracing
-   - Basic health checks only
+**Near-term**
+- Database-backed user store with RBAC
+- Prometheus + Grafana dashboards
+- Distributed tracing (Jaeger/Zipkin)
+- Test coverage to 80%+
 
-4. **Scalability:**
-   - Single Redis instance (no cluster)
-   - Single Kafka broker (no cluster)
-   - No load balancing configuration
+**Medium-term**
+- Redis cluster for high availability
+- Kafka multi-broker setup
+- Rate limiting and API key management
+- Secrets management (Vault)
 
-5. **Security:**
-   - JWT secret in configuration (should use secrets management)
-   - No rate limiting
-   - CORS allows all origins
-
-### Known Issues
-
-- None currently identified
-
----
-
-## Future Enhancements
-
-### Short-Term (1-3 months)
-
-1. **Custom Caching Service:**
-   - Implement `APP:MODULE:ENTITY:ID` key pattern
-   - Add `RedisValueValidator`
-   - Custom cache service with explicit TTL
-
-2. **Enhanced Authentication:**
-   - Database-backed user management
-   - Role-based access control (RBAC)
-   - Refresh token support
-
-3. **Monitoring:**
-   - Prometheus metrics
-   - Grafana dashboards
-   - Distributed tracing (Jaeger/Zipkin)
-
-4. **Testing:**
-   - Increase test coverage to 80%+
-   - Performance testing
-   - Load testing
-
-### Medium-Term (3-6 months)
-
-1. **Scalability:**
-   - Redis cluster support
-   - Kafka cluster configuration
-   - Load balancer setup
-
-2. **Security:**
-   - Secrets management (Vault)
-   - Rate limiting
-   - API key management
-
-3. **Documentation:**
-   - API versioning
-   - OpenAPI 3.1 upgrade
-   - Interactive API docs
-
-### Long-Term (6+ months)
-
-1. **Microservices:**
-   - Service mesh (Istio)
-   - API Gateway
-   - Service discovery
-
-2. **Advanced Features:**
-   - GraphQL API
-   - WebSocket support
-   - Real-time notifications
-
-3. **DevOps:**
-   - CI/CD pipeline
-   - Automated testing
-   - Blue-green deployments
+**Long-term**
+- Kubernetes deployment with service mesh
+- GraphQL API layer
+- Elasticsearch for full-text search
+- CI/CD pipeline with blue-green deployments
 
 ---
 
-## Conclusion
-
-This documentation provides a comprehensive overview of the Academy Backend system, covering architecture, design, implementation, and deployment. The system is production-ready with Redis caching, JWT authentication, Kafka event-driven architecture, and a multi-module structure.
-
-For questions or contributions, please refer to the project repository or contact the development team.
-
----
-
-**Document Version:** 1.0  
-**Last Updated:** 2025-11-29  
-**Maintained By:** Academy Development Team
-
+**Document Version:** 1.0 · **Last Updated:** 2025-11-29 · **Team:** Academy Development

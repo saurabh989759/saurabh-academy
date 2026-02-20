@@ -17,69 +17,56 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Controller implementing generated BatchesApi interface
- * Uses generated request/response models from OpenAPI
- * Directly delegates to BatchService
- */
 @RestController
 @RequiredArgsConstructor
 @Slf4j
 public class BatchController implements BatchesApi {
-    
+
     private final BatchService batchService;
-    private final ApiModelMapper apiModelMapper;
-    private final WebSocketEventPublisher webSocketEventPublisher;
-    
-    @Override
-    public ResponseEntity<Batch> assignClassToBatch(Long id, Long classId) {
-        log.debug("Assigning class {} to batch {}", classId, id);
-        BatchDTO dto = batchService.assignClassToBatch(id, classId);
-        return ResponseEntity.ok(apiModelMapper.toModel(dto));
-    }
-    
+    private final ApiModelMapper mapper;
+    private final WebSocketEventPublisher eventPublisher;
+
     @Override
     public ResponseEntity<Batch> createBatch(BatchInput batchInput) {
-        log.debug("Creating batch: {}", batchInput.getName());
-        BatchDTO dto = apiModelMapper.toDTO(batchInput);
-        BatchDTO created = batchService.createBatch(dto);
-        // Publish WebSocket event
-        webSocketEventPublisher.publishBatchCreated(created.getId(), created.getName());
-        return ResponseEntity.status(HttpStatus.CREATED).body(apiModelMapper.toModel(created));
+        log.debug("POST /batches — name={}", batchInput.getName());
+        BatchDTO created = batchService.createBatch(mapper.toDTO(batchInput));
+        eventPublisher.publishBatchCreated(created.getId(), created.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toModel(created));
     }
-    
-    @Override
-    public ResponseEntity<Void> deleteBatch(Long id) {
-        log.debug("Deleting batch: {}", id);
-        batchService.deleteBatch(id);
-        // Publish WebSocket event
-        webSocketEventPublisher.publishBatchDeleted(id);
-        return ResponseEntity.noContent().build();
-    }
-    
-    @Override
-    public ResponseEntity<PageBatch> getAllBatches(Integer page, Integer size, String sort) {
-        log.debug("Getting all batches, page: {}, size: {}, sort: {}", page, size, sort);
-        Pageable pageable = PageableUtil.createPageable(page, size, sort);
-        Page<BatchDTO> dtoPage = batchService.getAllBatches(pageable);
-        return ResponseEntity.ok(apiModelMapper.toPageBatch(dtoPage));
-    }
-    
-    @Override
-    public ResponseEntity<Batch> getBatchById(Long id) {
-        log.debug("Getting batch by id: {}", id);
-        BatchDTO dto = batchService.getBatchById(id);
-        return ResponseEntity.ok(apiModelMapper.toModel(dto));
-    }
-    
+
     @Override
     public ResponseEntity<Batch> updateBatch(Long id, BatchInput batchInput) {
-        log.debug("Updating batch: {}", id);
-        BatchDTO dto = apiModelMapper.toDTO(batchInput);
-        BatchDTO updated = batchService.updateBatch(id, dto);
-        // Publish WebSocket event
-        webSocketEventPublisher.publishBatchUpdated(updated.getId(), updated.getName());
-        return ResponseEntity.ok(apiModelMapper.toModel(updated));
+        log.debug("PUT /batches/{}", id);
+        BatchDTO updated = batchService.updateBatch(id, mapper.toDTO(batchInput));
+        eventPublisher.publishBatchUpdated(updated.getId(), updated.getName());
+        return ResponseEntity.ok(mapper.toModel(updated));
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteBatch(Long id) {
+        log.debug("DELETE /batches/{}", id);
+        batchService.deleteBatch(id);
+        eventPublisher.publishBatchDeleted(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<Batch> getBatchById(Long id) {
+        log.debug("GET /batches/{}", id);
+        return ResponseEntity.ok(mapper.toModel(batchService.getBatchById(id)));
+    }
+
+    @Override
+    public ResponseEntity<PageBatch> getAllBatches(Integer page, Integer size, String sort) {
+        log.debug("GET /batches page={} size={}", page, size);
+        Pageable pageable = PageableUtil.createPageable(page, size, sort);
+        Page<BatchDTO> resultPage = batchService.getAllBatches(pageable);
+        return ResponseEntity.ok(mapper.toPageBatch(resultPage));
+    }
+
+    @Override
+    public ResponseEntity<Batch> assignClassToBatch(Long id, Long classId) {
+        log.debug("POST /batches/{}/classes/{}", id, classId);
+        return ResponseEntity.ok(mapper.toModel(batchService.assignClassToBatch(id, classId)));
     }
 }
-

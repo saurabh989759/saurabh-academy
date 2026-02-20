@@ -14,136 +14,94 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-/**
- * JWT service for token generation and validation
- * Handles JWT token creation, parsing, and validation
- */
 @Service
 @Slf4j
 public class JwtService {
-    
+
     @Value("${jwt.secret:AcademyBackendSecretKeyForJWTTokenGenerationAndValidationMustBeAtLeast256Bits}")
-    private String secret;
-    
-    @Value("${jwt.expiration:86400000}") // 24 hours default
-    private Long expiration;
-    
-    /**
-     * Generate JWT token for a user
-     * 
-     * @param username Username/email
-     * @param roles User roles (optional)
-     * @return JWT token string
-     */
+    private String secretKey;
+
+    @Value("${jwt.expiration:86400000}")
+    private Long tokenTtlMs;
+
+    // -------------------------------------------------------------------------
+    // Token generation
+    // -------------------------------------------------------------------------
+
     public String generateToken(String username, String... roles) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("sub", username);
         if (roles != null && roles.length > 0) {
             claims.put("roles", String.join(",", roles));
         }
-        return createToken(claims, username);
+        return buildToken(claims, username);
     }
-    
-    /**
-     * Generate JWT token with custom claims
-     * 
-     * @param username Username/email
-     * @param claims Custom claims
-     * @return JWT token string
-     */
+
     public String generateToken(String username, Map<String, Object> claims) {
-        return createToken(claims, username);
+        return buildToken(claims, username);
     }
-    
-    /**
-     * Create JWT token
-     */
-    private String createToken(Map<String, Object> claims, String subject) {
+
+    // -------------------------------------------------------------------------
+    // Token validation
+    // -------------------------------------------------------------------------
+
+    public Boolean validateToken(String token, String username) {
+        return username.equals(extractUsername(token)) && !isExpired(token);
+    }
+
+    public Boolean validateToken(String token) {
+        try {
+            return !isExpired(token);
+        } catch (Exception ex) {
+            log.warn("Token validation failed: {}", ex.getMessage());
+            return false;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Claims extraction
+    // -------------------------------------------------------------------------
+
+    public String extractUsername(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> resolver) {
+        return resolver.apply(parseAllClaims(token));
+    }
+
+    // -------------------------------------------------------------------------
+    // Private internals
+    // -------------------------------------------------------------------------
+
+    private String buildToken(Map<String, Object> claims, String subject) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + expiration);
-        
         return Jwts.builder()
             .claims(claims)
             .subject(subject)
             .issuedAt(now)
-            .expiration(expiryDate)
-            .signWith(getSigningKey())
+            .expiration(new Date(now.getTime() + tokenTtlMs))
+            .signWith(signingKey())
             .compact();
     }
-    
-    /**
-     * Extract username from token
-     */
-    public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
-    }
-    
-    /**
-     * Extract expiration date from token
-     */
-    public Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
-    }
-    
-    /**
-     * Extract a specific claim from token
-     */
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
-    }
-    
-    /**
-     * Extract all claims from token
-     */
-    private Claims extractAllClaims(String token) {
+
+    private Claims parseAllClaims(String token) {
         return Jwts.parser()
-            .verifyWith(getSigningKey())
+            .verifyWith(signingKey())
             .build()
             .parseSignedClaims(token)
             .getPayload();
     }
-    
-    /**
-     * Check if token is expired
-     */
-    private Boolean isTokenExpired(String token) {
+
+    private boolean isExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
-    
-    /**
-     * Validate token
-     * 
-     * @param token JWT token
-     * @param username Username to validate against
-     * @return true if token is valid, false otherwise
-     */
-    public Boolean validateToken(String token, String username) {
-        final String tokenUsername = extractUsername(token);
-        return (tokenUsername.equals(username) && !isTokenExpired(token));
-    }
-    
-    /**
-     * Validate token (without username check)
-     * 
-     * @param token JWT token
-     * @return true if token is valid, false otherwise
-     */
-    public Boolean validateToken(String token) {
-        try {
-            return !isTokenExpired(token);
-        } catch (Exception e) {
-            log.warn("Token validation failed: {}", e.getMessage());
-            return false;
-        }
-    }
-    
-    /**
-     * Get signing key from secret
-     */
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
-        return Keys.hmacShaKeyFor(keyBytes);
+
+    private SecretKey signingKey() {
+        return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 }
-

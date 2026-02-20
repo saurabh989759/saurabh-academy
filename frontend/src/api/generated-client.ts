@@ -275,6 +275,42 @@ if (isPlaceholder) {
     return {}
   }
 
+  // Batch Types API
+  baseApiClient.getAllBatchTypes = async () => {
+    console.log('🌐 API Call: GET /batch-types')
+    const response = await axiosInstance.get('/batch-types')
+    console.log('✅ API Response: GET /batch-types', response.data)
+    return { data: response.data }
+  }
+
+  baseApiClient.getBatchTypeById = async (id: number) => {
+    console.log('🌐 API Call: GET /batch-types/' + id)
+    const response = await axiosInstance.get(`/batch-types/${id}`)
+    console.log('✅ API Response: GET /batch-types/' + id, response.data)
+    return { data: response.data }
+  }
+
+  baseApiClient.createBatchType = async (batchType: any) => {
+    console.log('🌐 API Call: POST /batch-types', batchType)
+    const response = await axiosInstance.post('/batch-types', batchType)
+    console.log('✅ API Response: POST /batch-types', response.data)
+    return { data: response.data }
+  }
+
+  baseApiClient.updateBatchType = async (id: number, batchType: any) => {
+    console.log('🌐 API Call: PUT /batch-types/' + id, batchType)
+    const response = await axiosInstance.put(`/batch-types/${id}`, batchType)
+    console.log('✅ API Response: PUT /batch-types/' + id, response.data)
+    return { data: response.data }
+  }
+
+  baseApiClient.deleteBatchType = async (id: number) => {
+    console.log('🌐 API Call: DELETE /batch-types/' + id)
+    await axiosInstance.delete(`/batch-types/${id}`)
+    console.log('✅ API Response: DELETE /batch-types/' + id)
+    return {}
+  }
+
   // Auth API
   baseApiClient.login = async (credentials: any) => {
     console.log('🌐 API Call: POST /auth/login')
