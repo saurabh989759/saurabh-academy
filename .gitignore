@@ -1,0 +1,24 @@
+# Environment — copy .env.example to .env and never commit the real one
+.env
+
+# Gradle build output
+.gradle/
+build/
+*/build/
+**/build/
+
+# IDE
+.idea/
+*.iml
+*.iws
+.vscode/
+
+# Node
+node_modules/
+frontend/node_modules/
+
+# Frontend build output
+frontend/dist/
+
+# macOS
+.DS_Store
