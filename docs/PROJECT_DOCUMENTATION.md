@@ -73,7 +73,7 @@ The Academy Backend is a production-ready, multi-module Spring Boot application.
 
 | Category | Technology |
 |----------|------------|
-| Language / Runtime | Java 21 |
+| Language / Runtime | Java 22 |
 | Framework | Spring Boot 3.2.0 |
 | Persistence | Spring Data JPA, Hibernate, Flyway |
 | Database | MySQL 8.0 |
@@ -596,7 +596,7 @@ EventConsumer -> Kafka: acknowledge()
 ### Prerequisites
 
 - Docker & Docker Compose
-- Java 21+ (for local dev)
+- Java 22+ (for local dev)
 - MySQL 8.0+ (if not Docker)
 - Redis 7+ (if not Docker)
 
@@ -624,7 +624,7 @@ JWT_EXPIRATION=86400000
 docker build -t academy-backend:latest .
 
 # Start full stack
-docker-compose -f docker-compose.infrastructure.yml up -d
+docker-compose up -d
 
 # Verify
 curl http://localhost:8080/actuator/health

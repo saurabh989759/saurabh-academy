@@ -86,7 +86,7 @@ FRONTEND_URL=http://localhost:5173  # For CORS and WebSocket
 ### 6. CI/CD Pipeline
 
 #### GitHub Actions Workflow
-- **Backend Build**: Java 21, Gradle build, tests
+- **Backend Build**: Java 22, Gradle build, tests
 - **Frontend Build**: Node.js 20, npm install, lint, test, build
 - **Docker Images**: Builds both frontend and backend images
 - **Integration Tests**: Runs integration tests after builds
@@ -98,7 +98,7 @@ FRONTEND_URL=http://localhost:5173  # For CORS and WebSocket
 #### Backend (Manual)
 ```bash
 # Start infrastructure
-docker-compose -f docker-compose.infrastructure.yml up -d
+docker-compose up -d
 
 # Run backend
 ./gradlew :academy-api:bootRun

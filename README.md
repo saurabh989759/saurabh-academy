@@ -2,7 +2,7 @@
 
 A production-grade Spring Boot backend for running an academy platform. Manages students, batches, classes, mentors, and mentor sessions with full CRUD APIs, Redis caching, Kafka event streaming, JWT authentication, and a React frontend.
 
-**Stack:** Java 21 · Spring Boot 3.2.0 · MySQL 8.0 · Redis 7 · Apache Kafka · Docker
+**Stack:** Java 22 · Spring Boot 3.2.0 · MySQL 8.0 · Redis 7 · Apache Kafka · Docker
 
 ---
 
@@ -27,7 +27,7 @@ A production-grade Spring Boot backend for running an academy platform. Manages 
 
 | Tool | Version |
 |------|---------|
-| Java | 21+ |
+| Java | 22+ |
 | Gradle | 8.10+ (or use `./gradlew`) |
 | Docker + Docker Compose | Any recent version |
 | MySQL | 8.0+ (only if running without Docker) |
@@ -44,7 +44,7 @@ Starts all services — MySQL, Redis, Kafka, Zookeeper, the backend, and the fro
 ```bash
 git clone <repository-url>
 cd academy-backend
-docker-compose -f docker-compose.infrastructure.yml up --build
+docker-compose up --build
 ```
 
 Services will be available at:
@@ -60,7 +60,7 @@ Services will be available at:
 
 ```bash
 # Start infrastructure only
-docker-compose -f docker-compose.dev.yml up -d mysql redis kafka zookeeper
+docker-compose -f docker/docker-compose.dev.yml up -d mysql redis kafka zookeeper
 
 # Run the Spring Boot application
 ./gradlew bootRun
@@ -487,6 +487,10 @@ Compatible with ELK Stack, Splunk, CloudWatch, Datadog, and Loki.
 
 ```
 academy-backend/
+├── README.md
+├── build.gradle / settings.gradle / gradle.properties
+├── gradlew / gradlew.bat
+├── docker-compose.yml            # Full stack — run with: docker-compose up --build
 ├── modules/
 │   ├── academy-api/              # REST controllers, JWT security, configuration
 │   │   └── src/main/
@@ -512,8 +516,14 @@ academy-backend/
 │   ├── academy-kafka-producer/   # Domain event publishers
 │   └── academy-kafka-consumer/   # Audit event consumers
 ├── frontend/                     # React 18 + TypeScript UI
-├── docker-compose.infrastructure.yml
-├── Dockerfile
+├── docker/                       # Dockerfiles, compose override for local dev, init scripts
+│   ├── Dockerfile                # Backend multi-stage build
+│   ├── Dockerfile.kafka-consumer
+│   ├── docker-compose.dev.yml    # Infra only — for local ./gradlew bootRun
+│   ├── kafka/                    # Kafka topic creation script
+│   └── mysql/                    # MySQL init SQL (schema + seed data)
+├── docs/                         # All project documentation
+├── scripts/                      # Utility shell scripts
 └── postman/                      # Postman collection for API testing
 ```
 
@@ -610,8 +620,8 @@ docker-compose up --build
 
 ## Documentation
 
-- **Technical Architecture:** [PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)
-- **Project Report:** [PROJECT_REPORT.md](./PROJECT_REPORT.md)
+- **Technical Architecture:** [PROJECT_DOCUMENTATION.md](./docs/PROJECT_DOCUMENTATION.md)
+- **Project Report:** [PROJECT_REPORT.md](./docs/PROJECT_REPORT.md)
 - **Swagger UI:** http://localhost:8080/swagger-ui.html
 - **OpenAPI JSON:** http://localhost:8080/api-docs
 

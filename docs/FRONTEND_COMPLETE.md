@@ -7,7 +7,7 @@ The frontend has been fully updated to consume **ALL APIs** from the OpenAPI spe
 ## ✅ What's Included
 
 ### 1. Docker Compose Infrastructure
-- **Updated `docker-compose.infrastructure.yml`** to include:
+- **Updated `docker-compose.yml`** to include:
   - Frontend service (builds React app)
   - Backend service (Spring Boot API)
   - Nginx service (reverse proxy)
@@ -127,7 +127,7 @@ The frontend has been fully updated to consume **ALL APIs** from the OpenAPI spe
 
 ```bash
 # Start all services including frontend
-docker-compose -f docker-compose.infrastructure.yml up --build
+docker-compose up --build
 
 # Access the application
 # Frontend: http://localhost
@@ -139,7 +139,7 @@ docker-compose -f docker-compose.infrastructure.yml up --build
 
 ```bash
 # Terminal 1: Start infrastructure
-docker-compose -f docker-compose.infrastructure.yml up -d mysql redis kafka zookeeper
+docker-compose up -d mysql redis kafka zookeeper
 
 # Terminal 2: Start backend
 ./gradlew :academy-api:bootRun
@@ -186,7 +186,7 @@ npm run dev
 
 ## ✅ All Requirements Met
 
-- ✅ docker-compose.infrastructure.yml updated with frontend
+- ✅ docker-compose.yml updated with frontend
 - ✅ All APIs consumed from OpenAPI spec
 - ✅ User-friendly UI with error handling
 - ✅ All cases handled (loading, error, empty, success)

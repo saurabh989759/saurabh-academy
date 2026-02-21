@@ -5,7 +5,7 @@
 Run the entire stack — backend, frontend, MySQL, Redis, Kafka, and Zookeeper — with a single command:
 
 ```bash
-docker-compose -f docker-compose.infrastructure.yml up --build
+docker-compose up --build
 ```
 
 Once all containers are healthy, the system is available at:
@@ -32,14 +32,14 @@ Once all containers are healthy, the system is available at:
 
 ```bash
 # List all running containers
-docker-compose -f docker-compose.infrastructure.yml ps
+docker-compose ps
 
 # Stream all logs
-docker-compose -f docker-compose.infrastructure.yml logs -f
+docker-compose logs -f
 
 # Logs for a specific service
-docker-compose -f docker-compose.infrastructure.yml logs frontend
-docker-compose -f docker-compose.infrastructure.yml logs backend
+docker-compose logs frontend
+docker-compose logs backend
 ```
 
 ---
@@ -63,10 +63,10 @@ curl http://localhost/api/actuator/health
 
 ```bash
 # Bring everything down
-docker-compose -f docker-compose.infrastructure.yml down
+docker-compose down
 
 # Restart
-docker-compose -f docker-compose.infrastructure.yml up
+docker-compose up
 ```
 
 ---
@@ -79,22 +79,22 @@ docker-compose -f docker-compose.infrastructure.yml up
 # Find what's holding port 80
 sudo lsof -i :80
 
-# Or change the host port in docker-compose.infrastructure.yml:
+# Or change the host port in docker-compose.yml:
 # "80:80"  →  "8081:80"
 ```
 
 **Frontend container fails to build**
 
 ```bash
-docker-compose -f docker-compose.infrastructure.yml logs frontend
-docker-compose -f docker-compose.infrastructure.yml build --no-cache frontend
+docker-compose logs frontend
+docker-compose build --no-cache frontend
 ```
 
 **Backend not starting up**
 
 ```bash
-docker-compose -f docker-compose.infrastructure.yml logs backend
-docker-compose -f docker-compose.infrastructure.yml ps
+docker-compose logs backend
+docker-compose ps
 ```
 
 ---

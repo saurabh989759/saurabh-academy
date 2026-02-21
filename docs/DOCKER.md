@@ -158,7 +158,7 @@ Override defaults by creating a `.env` file in the project root:
 
 ```env
 SPRING_DATASOURCE_PASSWORD=yourpassword
-SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
 ```
 
 Alternatively, edit the `environment:` section of `docker-compose.yml` directly.

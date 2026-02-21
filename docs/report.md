@@ -2,7 +2,7 @@
 
 ## Abstract
 
-This project implements a comprehensive backend system for managing an academy with students, batches, mentors, classes, and mentor sessions. The system is built using Spring Boot 3.2.0 with Java 21, MySQL 8.0 for data persistence, and Apache Kafka for event-driven messaging. The application follows a layered architecture pattern with RESTful APIs, implements database migrations using Flyway, and includes comprehensive testing using Testcontainers. The system demonstrates production-ready practices including Docker containerization, CI/CD pipelines, API documentation, and monitoring capabilities.
+This project implements a comprehensive backend system for managing an academy with students, batches, mentors, classes, and mentor sessions. The system is built using Spring Boot 3.2.0 with Java 22, MySQL 8.0 for data persistence, and Apache Kafka for event-driven messaging. The application follows a layered architecture pattern with RESTful APIs, implements database migrations using Flyway, and includes comprehensive testing using Testcontainers. The system demonstrates production-ready practices including Docker containerization, CI/CD pipelines, API documentation, and monitoring capabilities.
 
 ## Project Description
 
@@ -666,7 +666,7 @@ AuthController.login()
 
 ### Local Development
 
-1. **Prerequisites**: Java 21, Maven, Docker
+1. **Prerequisites**: Java 22, Maven, Docker
 2. **Start Infrastructure**: `docker-compose -f docker-compose.dev.yml up -d`
 3. **Run Application**: `mvn spring-boot:run`
 4. **Access**: http://localhost:8080
@@ -726,7 +726,7 @@ docker-compose up --build
 ## Technologies Used
 
 ### Core Framework
-- **Java 21**: Latest LTS version with modern language features
+- **Java 22**: Latest LTS version with modern language features
 - **Spring Boot 3.2.0**: Application framework providing auto-configuration and production-ready features
 - **Spring Data JPA**: Simplifies database access with repository pattern
 - **Spring Kafka**: Integration with Apache Kafka for event-driven architecture

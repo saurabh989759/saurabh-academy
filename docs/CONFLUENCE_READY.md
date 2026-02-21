@@ -2,7 +2,7 @@
 
 ## Overview
 
-A production-ready backend platform for managing academy operations — students, batches, mentor sessions, classes, and instructors. Built on Spring Boot 3.2.0 with Java 21, the system follows a layered multi-module architecture with MySQL 8.0 for persistence, Apache Kafka for event streaming, and Redis for caching. Schema versioning is handled via Flyway, and the test suite relies on Testcontainers for realistic integration coverage.
+A production-ready backend platform for managing academy operations — students, batches, mentor sessions, classes, and instructors. Built on Spring Boot 3.2.0 with Java 22, the system follows a layered multi-module architecture with MySQL 8.0 for persistence, Apache Kafka for event streaming, and Redis for caching. Schema versioning is handled via Flyway, and the test suite relies on Testcontainers for realistic integration coverage.
 
 ---
 
@@ -10,7 +10,7 @@ A production-ready backend platform for managing academy operations — students
 
 | Category | Technology |
 |---|---|
-| Core Framework | Java 21, Spring Boot 3.2.0 |
+| Core Framework | Java 22, Spring Boot 3.2.0 |
 | Persistence | Spring Data JPA, MySQL 8.0, Flyway, Hibernate |
 | Messaging | Apache Kafka, Zookeeper |
 | Caching | Redis (Spring Cache abstraction) |
@@ -138,7 +138,7 @@ Steps in sequence:
 
 ```bash
 # 1. Start infrastructure
-docker-compose -f docker-compose.infrastructure.yml up -d
+docker-compose up -d
 
 # 2. Run the application
 ./gradlew bootRun
@@ -152,7 +152,7 @@ curl http://localhost:8080/actuator/health
 The Docker Compose file starts MySQL, Zookeeper, Kafka, Redis, the backend, and the React frontend together using a multi-stage Dockerfile build.
 
 ```bash
-docker-compose -f docker-compose.infrastructure.yml up --build
+docker-compose up --build
 ```
 
 ### Production Options

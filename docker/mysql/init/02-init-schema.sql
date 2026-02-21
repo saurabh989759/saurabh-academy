@@ -1,8 +1,8 @@
--- Initialize schema for academy_db_dev on first run
+-- Initialize schema for academy_db on first run
 -- This ensures tables exist even if Flyway hasn't run yet
 -- Note: Flyway will handle migrations when the application starts
 
-USE academy_db_dev;
+USE academy_db;
 
 -- Only create tables if they don't exist (idempotent)
 -- This script runs on container initialization

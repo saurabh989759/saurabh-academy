@@ -1,7 +1,7 @@
 # Running Backend Manually
 
 ## Prerequisites
-- Java 21 or higher
+- Java 22 or higher
 - Gradle (or use ./gradlew)
 
 ## Step 1: Ensure Docker Services are Running

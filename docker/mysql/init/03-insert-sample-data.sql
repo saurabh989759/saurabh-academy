@@ -1,7 +1,7 @@
 -- Insert sample data (idempotent - uses ON DUPLICATE KEY UPDATE)
 -- This ensures data exists but won't fail if already present
 
-USE academy_db_dev;
+USE academy_db;
 
 -- Insert sample data: Batch Types
 INSERT INTO batch_type (name) VALUES

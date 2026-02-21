@@ -1,3 +1,4 @@
+
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -20,9 +21,10 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${APP_HOST:-localhost}:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${APP_HOST:-localhost}:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
@@ -73,16 +75,33 @@ services:
       timeout: 5s
       retries: 5
 
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: academy-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./docker/kafka/create-topics.sh:/create-topics.sh:ro
+    networks:
+      - academy-network
+    entrypoint: ["/bin/bash", "/create-topics.sh"]
+    environment:
+      KAFKA_BOOTSTRAP_SERVER: kafka:29092
+    restart: "no"
+
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: docker/Dockerfile
     container_name: academy-backend
     depends_on:
       mysql:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     ports:
@@ -91,7 +110,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/academy_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SPRING_PROFILES_ACTIVE: docker
       FRONTEND_URL: http://${APP_HOST:-localhost}
       SPRING_REDIS_HOST: redis
@@ -145,12 +164,14 @@ services:
   academy-kafka-consumer:
     build:
       context: .
-      dockerfile: Dockerfile.kafka-consumer
+      dockerfile: docker/Dockerfile.kafka-consumer
     container_name: academy-kafka-consumer
     depends_on:
       mysql:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      backend:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: docker
@@ -159,7 +180,7 @@ services:
       DB_NAME: academy_db
       DB_USER: root
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_CONSUMER_GROUP_ID: academy-kafka-consumer-group
     networks:
       - academy-network

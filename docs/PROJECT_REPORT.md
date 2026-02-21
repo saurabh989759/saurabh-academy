@@ -1,7 +1,7 @@
 # Academy Management System — Project Report
 
 **Title:** Backend Implementation — Academy Management Platform
-**Stack:** Java 21 · Spring Boot 3.2.0 · MySQL 8.0 · Redis · Apache Kafka
+**Stack:** Java 22 · Spring Boot 3.2.0 · MySQL 8.0 · Redis · Apache Kafka
 **Date:** November 2024
 
 ---
@@ -28,7 +28,7 @@
 
 ## Executive Summary
 
-This report covers the design and implementation of a production-ready backend for an academy management platform. The system is built on **Spring Boot 3.2.0** and **Java 21** using a multi-module Gradle project. It uses **MySQL 8.0** for relational data, **Redis** for TTL-based caching, and **Apache Kafka** for decoupled event publishing.
+This report covers the design and implementation of a production-ready backend for an academy management platform. The system is built on **Spring Boot 3.2.0** and **Java 22** using a multi-module Gradle project. It uses **MySQL 8.0** for relational data, **Redis** for TTL-based caching, and **Apache Kafka** for decoupled event publishing.
 
 Core engineering concerns addressed include:
 
@@ -319,7 +319,7 @@ Lock key format: `student:onboarding:{email}` — scoped per email address.
 
 | Technology | Role |
 |------------|------|
-| Java 21 | Modern LTS with virtual threads, records, pattern matching |
+| Java 22 | Modern LTS with virtual threads, records, pattern matching |
 | Spring Boot 3.2.0 | Auto-configuration, embedded server, actuator |
 | Spring Data JPA | Repository abstraction over Hibernate |
 | Spring Data Redis | Cache abstraction with Redis backend |
@@ -499,7 +499,7 @@ Dependencies are health-check controlled — the backend waits for MySQL, Redis,
 | Environment | Approach |
 |-------------|----------|
 | Local Dev | Docker Compose dev config |
-| Staging | Full `docker-compose.infrastructure.yml` |
+| Staging | Full `docker-compose.yml` |
 | Production (small) | Docker Compose + Nginx reverse proxy |
 | Production (large) | Kubernetes with StatefulSets for databases |
 | Cloud | AWS RDS + MSK + ElastiCache + ECS/EKS |
